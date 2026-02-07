@@ -41,7 +41,7 @@ const AddCategory = () => {
           setCategoryName("");
 
           toast("Категория добавлена", {
-            description: `${data.category_name},`,
+            description: `${data.category_name}`,
           });
         },
         onError: (error) => {

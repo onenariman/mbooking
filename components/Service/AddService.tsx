@@ -22,8 +22,52 @@ import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Label } from "../ui/label";
 import Link from "next/link";
+import { useCategories } from "@/src/hooks/categories.hooks";
+import { useState } from "react";
+import { useAddService } from "@/src/hooks/services.hook";
+import { toast } from "sonner";
+import Spinner from "../Spinner";
+import { formatPriceInput } from "@/src/validators/formatPriceInput";
 
 const AddService = () => {
+  const { data: categories = [] } = useCategories();
+  const [serviceName, setServiceName] = useState("");
+  const [price, setPrice] = useState<number | null>(null);
+  const [categoryId, setCategoryId] = useState<string | null>(null);
+
+  const { mutate: addService, isPending } = useAddService();
+
+  const handleSubmit = () => {
+    if (!serviceName.trim()) {
+      toast.error("Введите имя клиента");
+      return;
+    }
+
+    addService(
+      {
+        name: serviceName.trim(),
+        category_id: categoryId,
+        price: price,
+      },
+      {
+        onSuccess: (data) => {
+          setServiceName("");
+          setPrice(null);
+          setCategoryId(null);
+
+          toast("Услуга добавлена", {
+            description: `${data.name}`,
+          });
+        },
+        onError: (error) => {
+          toast.error("Услуга не добавлена", {
+            description: `Проверьте соединение с интернетом: ${error.message}`,
+          });
+        },
+      },
+    );
+  };
+
   return (
     <>
       <Card className="border-none">
@@ -37,7 +81,7 @@ const AddService = () => {
                 <span className="font-semibold">Без категории</span>.
               </li>
               <li>
-                Категорию можно добавить на этой странице:{" "}
+                Категорию можно добавить на странице:{" "}
                 <Link
                   href="/categories"
                   className="text-blue-600 hover:underline"
@@ -53,20 +97,54 @@ const AddService = () => {
         </CardHeader>
         <CardContent className="flex flex-col gap-y-2">
           <Label>Название услуги</Label>
-          <Input placeholder="Например: Электроэпиляция лица" />
-          <Select>
+          <Input
+            placeholder="Например: Электроэпиляция лица"
+            value={serviceName}
+            onChange={(e) => setServiceName(e.target.value)}
+          />
+          <Label className="text-xs text-gray-500 italic">
+            Внимание если *Стоимость услуги не фиксированная оставьте поле
+            пустым
+          </Label>
+          <Input
+            placeholder="Стоимость услуги"
+            value={price ?? ""}
+            onChange={(e) => {
+              const formatted = formatPriceInput(e.target.value);
+
+              // пустое поле
+              if (formatted === "") {
+                setPrice(null);
+              } else {
+                setPrice(Number(formatted));
+              }
+            }}
+          />
+          <Select
+            key={categoryId ?? "empty"}
+            value={categoryId ?? undefined}
+            onValueChange={(value) =>
+              setCategoryId(value === "" ? null : value)
+            }
+          >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Выберите категорию" />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
                 <SelectLabel>Категории</SelectLabel>
-                <SelectItem value=" ">Без категории</SelectItem>
-                <SelectItem value="epilation">Электроэпиляция</SelectItem>
+                {categories.length > 0 &&
+                  categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.category_name}
+                    </SelectItem>
+                  ))}
               </SelectGroup>
             </SelectContent>
           </Select>
-          <Button>Добавить услугу</Button>
+          <Button onClick={handleSubmit} disabled={isPending}>
+            {isPending ? <Spinner>Добавляем</Spinner> : "Добавить"}
+          </Button>
         </CardContent>
       </Card>
     </>

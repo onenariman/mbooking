@@ -1,10 +1,11 @@
 "use client";
 import Link from "next/link";
+import { ZodClient } from "@/src/schemas/clients/clientSchema";
+import { useDeleteClient } from "@/src/hooks/clients.hooks";
+
 import { MessageCircle, PhoneCall } from "lucide-react";
 import { Button } from "../ui/button";
 import { EditClient } from "./EditClient";
-import { ZodClient } from "@/src/schemas/clients/clientSchema";
-import { useDeleteClient } from "@/src/hooks/clients.hooks";
 import { DeleteClient } from "./DeleteClient";
 import { toast } from "sonner";
 

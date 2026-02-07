@@ -6,7 +6,9 @@ const supabase = createClient();
 export const fetchClients = async () => {
   const { data, error } = await supabase.from("clients").select("*");
 
-  if (error) throw Error;
+  if (error) {
+    throw new Error(error.message);
+  }
 
   return data;
 };
@@ -20,7 +22,9 @@ export const addClient = async (
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    throw new Error(error.message);
+  }
 
   return data as ZodClient;
 };

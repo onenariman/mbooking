@@ -28,6 +28,9 @@ const EditCategory = ({ category }: { category: ZodCategory }) => {
 
   const [localError, setLocalError] = useState("");
 
+  const getErrorMessage = (error: unknown) =>
+    error instanceof Error ? error.message : String(error);
+
   const submit = async () => {
     if (!name.trim() || name.length < 2) {
       setLocalError("Проверьте правильность заполнения полей");
@@ -37,19 +40,18 @@ const EditCategory = ({ category }: { category: ZodCategory }) => {
     try {
       await mutateAsync({
         id: category.id,
-        updates: {
-          category_name: name.trim(),
-        },
+        updates: { category_name: name.trim() },
       });
 
       setOpen(false);
+      setLocalError("");
 
       toast.success("Данные обновлены", {
         description: `Категория ${name} успешно изменена`,
       });
-    } catch {
+    } catch (error: unknown) {
       toast.error("Ошибка при сохранении", {
-        description: "Попробуйте ещё раз",
+        description: getErrorMessage(error),
       });
     }
   };

@@ -6,7 +6,9 @@ const supabase = createClient();
 export const fetchCategory = async () => {
   const { data, error } = await supabase.from("categories").select("*");
 
-  if (error) throw Error;
+  if (error) {
+    throw new Error(error.message);
+  }
 
   return data;
 };
@@ -20,7 +22,9 @@ export const addCategory = async (
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    throw new Error(error.message);
+  }
 
   return data as ZodCategory;
 };
@@ -31,7 +35,9 @@ export const deleteCategory = async (id: string) => {
     .delete()
     .eq("id", id);
 
-  if (error) throw error;
+  if (error) {
+    throw new Error(error.message);
+  }
   return data;
 };
 
@@ -43,6 +49,8 @@ export const updateCategory = async (
     .from("categories")
     .update(updates)
     .eq("id", id);
-  if (error) throw error;
+  if (error) {
+    throw new Error(error.message);
+  }
   return { id, updates };
 };
