@@ -1,13 +1,11 @@
 "use client";
 
 import { Input } from "../ui/input";
-import { Label } from "../ui/label";
 import { formatPhone } from "./formatPhone";
 
 const InputPhone = ({
   value, // ← ТОЛЬКО цифры
   onChange,
-  label,
 }: {
   value: string;
   onChange: (val: string) => void;
@@ -29,8 +27,6 @@ const InputPhone = ({
 
   return (
     <div className="flex flex-col gap-y-2">
-      <Label>{label || "Номер телефона"}</Label>
-
       <Input
         value={formatted}
         inputMode="numeric"

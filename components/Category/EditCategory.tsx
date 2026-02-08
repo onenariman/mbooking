@@ -19,6 +19,7 @@ import { toast } from "sonner";
 
 import { ZodCategory } from "@/src/schemas/categories/categorySchema";
 import { useUpdateCategory } from "@/src/hooks/categories.hooks";
+import { getErrorMessage } from "@/src/helpers/getErrorMessage";
 
 const EditCategory = ({ category }: { category: ZodCategory }) => {
   const { mutateAsync, isPending } = useUpdateCategory();
@@ -27,9 +28,6 @@ const EditCategory = ({ category }: { category: ZodCategory }) => {
   const [name, setName] = useState(category.category_name ?? "");
 
   const [localError, setLocalError] = useState("");
-
-  const getErrorMessage = (error: unknown) =>
-    error instanceof Error ? error.message : String(error);
 
   const submit = async () => {
     if (!name.trim() || name.length < 2) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useClients } from "@/src/hooks/clients.hooks";
-import Item from "./Item";
+import ItemClient from "./ItemClient";
 
 import {
   Command,
@@ -12,7 +12,7 @@ import {
   CommandEmpty,
 } from "@/components/ui/command";
 
-const List = () => {
+const ListClient = () => {
   const { data: clients = [], isLoading, isError, error } = useClients();
 
   if (isLoading) return <p>Загрузка клиентов...</p>;
@@ -21,10 +21,8 @@ const List = () => {
   return (
     <Command>
       <CommandInput placeholder="Найти клиента" />
-
-      <CommandList className="my-5">
+      <CommandList>
         <CommandEmpty>Клиенты не найдены</CommandEmpty>
-
         <CommandGroup>
           {clients.map((client) => (
             <CommandItem
@@ -32,7 +30,7 @@ const List = () => {
               value={`${client.name ?? ""} ${client.phone ?? ""}`}
               className="border my-3"
             >
-              <Item client={client} />
+              <ItemClient client={client} />
             </CommandItem>
           ))}
         </CommandGroup>
@@ -41,4 +39,4 @@ const List = () => {
   );
 };
 
-export default List;
+export default ListClient;

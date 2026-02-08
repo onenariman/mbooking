@@ -9,7 +9,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Trash, Loader2 } from "lucide-react";
+import { Loader2, TrashIcon } from "lucide-react";
 import { toast } from "sonner";
 
 interface DeleteConfirmProps {
@@ -23,7 +23,7 @@ export const DeleteClient = ({ onDelete }: DeleteConfirmProps) => {
     <Dialog>
       <DialogTrigger asChild>
         <Button variant="outline" size="icon" className="text-destructive">
-          <Trash size={18} />
+          <TrashIcon size={18} />
         </Button>
       </DialogTrigger>
 

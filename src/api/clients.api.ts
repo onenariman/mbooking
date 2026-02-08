@@ -1,4 +1,4 @@
-import { createClient } from "@/utils/supabase/client";
+import { createClient } from "@/src/utils/supabase/client";
 import { ZodClient } from "../schemas/clients/clientSchema";
 
 const supabase = createClient();

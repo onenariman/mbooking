@@ -1,5 +1,5 @@
 import { type NextRequest } from "next/server";
-import { updateSession } from "@/utils/supabase/middleware";
+import { updateSession } from "@/src/utils/supabase/middleware";
 
 // 1. Имя функции должно быть строго "middleware"
 // 2. Она ДОЛЖНА иметь префикс export

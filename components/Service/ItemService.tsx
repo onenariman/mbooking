@@ -20,8 +20,10 @@ const ItemService = ({ service }: ItemProps) => {
 
   return (
     <div className="w-full flex items-center justify-between">
-      <p className="text-xs font-semibold">{service.name}</p>
-      <p>{service.price || ""}</p>
+      <div>
+        <p className="text-xs font-semibold">{service.name}</p>
+        <p>{service.price != null ? `${service.price} руб.` : ""}</p>
+      </div>
 
       <div className="flex items-center gap-x-2">
         <EditService service={service} />

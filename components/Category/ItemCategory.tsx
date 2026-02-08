@@ -19,7 +19,7 @@ const ItemCategory = ({ category }: ItemProps) => {
 
   return (
     <div className="w-full flex items-center justify-between">
-      <p className="text-lg font-semibold">{category.category_name}</p>
+      <p className="text-xs font-semibold">{category.category_name}</p>
 
       <div className="flex items-center gap-x-2">
         <EditCategory category={category} />

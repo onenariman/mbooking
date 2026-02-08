@@ -71,29 +71,19 @@ const AddClient = () => {
   const isFormInvalid = !name.trim() || clientPhone.length !== 10 || isPending;
 
   return (
-    <Card className="border-none">
-      <CardHeader>
+    <Card className="rounded-lg">
+      <CardHeader className="flex flex-col gap-y-1">
         <CardTitle>Добавить клиента</CardTitle>
         <CardDescription>Введите имя и номер телефона клиента</CardDescription>
       </CardHeader>
-
       <CardContent className="flex flex-col gap-y-3">
-        <div className="flex flex-col gap-y-1">
-          <Label>Имя клиента</Label>
-          <Input
-            placeholder="Введите имя клиента"
-            value={name}
-            onChange={handleNameChange}
-            suppressHydrationWarning
-          />
-        </div>
-
-        <InputPhone
-          value={clientPhone}
-          label="Номер телефона"
-          onChange={handlePhoneChange}
+        <Input
+          placeholder="Введите имя клиента"
+          value={name}
+          onChange={handleNameChange}
+          suppressHydrationWarning
         />
-
+        <InputPhone value={clientPhone} onChange={handlePhoneChange} />
         <Button type="button" onClick={handleSubmit} disabled={isFormInvalid}>
           {isPending ? <Spinner>Добавляем</Spinner> : "Добавить"}
         </Button>

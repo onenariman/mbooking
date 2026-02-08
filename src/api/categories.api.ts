@@ -1,4 +1,4 @@
-import { createClient } from "@/utils/supabase/client";
+import { createClient } from "@/src/utils/supabase/client";
 import { ZodCategory } from "../schemas/categories/categorySchema";
 
 const supabase = createClient();

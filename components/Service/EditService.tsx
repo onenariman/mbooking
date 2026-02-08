@@ -24,13 +24,14 @@ import {
   SelectItem,
   SelectLabel,
   SelectTrigger,
-  SelectValue,
+  // SelectValue,
 } from "@/components/ui/select";
 
 import { useUpdateServices } from "@/src/hooks/services.hook";
 import { ZodService } from "@/src/schemas/services/serviceSchema";
 import { useCategories } from "@/src/hooks/categories.hooks";
 import { formatPriceInput } from "@/src/validators/formatPriceInput";
+import { getErrorMessage } from "@/src/helpers/getErrorMessage";
 
 const EditService = ({ service }: { service: ZodService }) => {
   const { mutateAsync, isPending } = useUpdateServices();
@@ -43,11 +44,6 @@ const EditService = ({ service }: { service: ZodService }) => {
   );
   const [price, setPrice] = useState<number | null>(service.price ?? null);
   const [localError, setLocalError] = useState("");
-
-  // Типобезопасный парсер ошибки
-  function getErrorMessage(error: unknown): string {
-    return error instanceof Error ? error.message : String(error);
-  }
 
   const handleSubmit = async () => {
     if (!name.trim()) {
@@ -130,7 +126,6 @@ const EditService = ({ service }: { service: ZodService }) => {
                 value={categoryId ?? undefined}
                 onValueChange={setCategoryId}
               >
-                {/* Используем asChild для отключения лишних aria */}
                 <SelectTrigger className="w-full">
                   <div className="input-like">
                     {categoryId
