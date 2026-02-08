@@ -18,7 +18,6 @@ import {
 } from "../ui/card";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
-import { Label } from "../ui/label";
 
 const AddClient = () => {
   const [name, setName] = useState("");
@@ -68,7 +67,7 @@ const AddClient = () => {
     );
   };
 
-  const isFormInvalid = !name.trim() || clientPhone.length !== 10 || isPending;
+  // const isFormInvalid = !name.trim() || clientPhone.length !== 10 || isPending;
 
   return (
     <Card className="rounded-lg">
@@ -84,7 +83,12 @@ const AddClient = () => {
           suppressHydrationWarning
         />
         <InputPhone value={clientPhone} onChange={handlePhoneChange} />
-        <Button type="button" onClick={handleSubmit} disabled={isFormInvalid}>
+        <Button
+          type="button"
+          onClick={handleSubmit}
+          // disabled={isFormInvalid}
+          variant="default"
+        >
           {isPending ? <Spinner>Добавляем</Spinner> : "Добавить"}
         </Button>
       </CardContent>

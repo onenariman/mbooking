@@ -6,6 +6,19 @@ import type { Metadata } from "next";
 import { TanstackProvider } from "@/components/providers/tanstack-provider";
 import { Devtools } from "@/src/devtools/devtools";
 import { Playwrite_CU_Guides } from "next/font/google";
+import { Geist, Geist_Mono, Noto_Sans } from "next/font/google";
+
+const notoSans = Noto_Sans({ variable: "--font-sans" });
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
   title: "Мумина онлайн запись",
@@ -28,8 +41,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ru">
-      <body className="antialiased">
+    <html lang="ru" className={notoSans.variable}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} ${playwrite} antialiased`}
+      >
         <header className="mx-auto max-w-5xl px-4 mt-5">
           <nav className="flex items-center justify-between">
             <Link
