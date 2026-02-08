@@ -28,7 +28,7 @@ const AddCategory = () => {
 
   const handleSubmit = () => {
     if (!categoryName.trim()) {
-      toast.error("Введите имя клиента");
+      toast.error("Введите название категории");
       return;
     }
 

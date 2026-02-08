@@ -5,16 +5,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { EditClient } from "./EditClient";
-import { ZodClient } from "@/src/schemas/clients/clientSchema";
 import { useState } from "react";
 import { EllipsisVertical } from "lucide-react";
+import { ZodService } from "@/src/schemas/services/serviceSchema";
+import { EditService } from "./EditService";
 
-export function DropdownMenuClient({
-  client,
+export function DropdownMenuService({
+  service,
   onDelete,
 }: {
-  client: ZodClient;
+  service: ZodService;
   onDelete: () => Promise<void>;
 }) {
   const [editOpen, setEditOpen] = useState(false);
@@ -39,7 +39,11 @@ export function DropdownMenuClient({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <EditClient client={client} open={editOpen} onOpenChange={setEditOpen} />
+      <EditService
+        service={service}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+      />
     </>
   );
 }

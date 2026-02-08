@@ -39,7 +39,7 @@ const AddService = () => {
 
   const handleSubmit = () => {
     if (!serviceName.trim()) {
-      toast.error("Введите имя клиента");
+      toast.error("Введите название услуги");
       return;
     }
 

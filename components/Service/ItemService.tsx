@@ -2,9 +2,8 @@
 import { ZodService } from "@/src/schemas/services/serviceSchema";
 
 import { toast } from "sonner";
-import EditService from "./EditService";
-import DeleteService from "./DeleteService";
 import { useDeleteService } from "@/src/hooks/services.hook";
+import { DropdownMenuService } from "./DropdownMenuService";
 
 interface ItemProps {
   service: ZodService;
@@ -25,9 +24,8 @@ const ItemService = ({ service }: ItemProps) => {
         <p>{service.price != null ? `${service.price} руб.` : ""}</p>
       </div>
 
-      <div className="flex items-center gap-x-2">
-        <EditService service={service} />
-        <DeleteService onDelete={handleDelete} />
+      <div>
+        <DropdownMenuService service={service} onDelete={handleDelete} />
       </div>
     </div>
   );
