@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import type { Metadata } from "next";
 import { TanstackProvider } from "@/components/providers/tanstack-provider";
 import { Devtools } from "@/src/devtools/devtools";
+import { Playwrite_CU_Guides } from "next/font/google";
 
 export const metadata: Metadata = {
   title: "Мумина онлайн запись",
@@ -17,22 +18,32 @@ export const metadata: Metadata = {
   },
 };
 
+export const playwrite = Playwrite_CU_Guides({
+  weight: "400",
+});
+
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="ru">
       <body className="antialiased">
         <header className="mx-auto max-w-5xl px-4 mt-5">
-          <nav className="flex items-center gap-x-4 justify-between">
-            <Link href="/" className="hover:opacity-80 transition-opacity">
-              Главная
+          <nav className="flex items-center justify-between">
+            <Link
+              href="/"
+              style={{ fontFamily: playwrite.style.fontFamily }}
+              className="text-2xl font-medium tracking-wide hover:opacity-80 transition-opacity"
+            >
+              Reception
             </Link>
+
             <NavbarMenu />
           </nav>
         </header>
+
         <main className="mx-auto max-w-5xl px-4 mt-5">
           <TanstackProvider>
             {children}
