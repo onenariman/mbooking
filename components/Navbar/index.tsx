@@ -16,17 +16,17 @@ import { Logs } from "lucide-react";
 
 const NavbarMenu = () => {
   return (
-    <div>
+    <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button>
+          <button className="cursor-pointer">
             <Logs strokeWidth={1.5} size={28} className="mt-3" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56" align="start">
           <DropdownMenuGroup>
             <DropdownMenuItem>
-              <Link href="/">Ресепшен</Link>
+              <Link href="/receptions">Ресепшен</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
@@ -56,7 +56,7 @@ const NavbarMenu = () => {
           <DropdownMenuItem>Выйти</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-    </div>
+    </>
   );
 };
 

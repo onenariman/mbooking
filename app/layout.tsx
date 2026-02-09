@@ -20,6 +20,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const playwrite = Playwrite_CU_Guides({
+  weight: "400",
+});
+
 export const metadata: Metadata = {
   title: "Мумина онлайн запись",
   description: "Управление клиентами",
@@ -30,10 +34,6 @@ export const metadata: Metadata = {
     email: false,
   },
 };
-
-export const playwrite = Playwrite_CU_Guides({
-  weight: "400",
-});
 
 export default function RootLayout({
   children,
@@ -47,12 +47,13 @@ export default function RootLayout({
       >
         <header className="mx-auto max-w-5xl px-4 mt-5">
           <nav className="flex items-center justify-between">
-            <Link
-              href="/"
-              style={{ fontFamily: playwrite.style.fontFamily }}
-              className="text-2xl font-medium tracking-wide hover:opacity-80 transition-opacity"
-            >
-              Reception
+            <Link href="/">
+              <button
+                style={{ fontFamily: playwrite.style.fontFamily }}
+                className="text-2xl font-medium tracking-wide hover:opacity-80 transition-opacity cursor-pointer"
+              >
+                Reception
+              </button>
             </Link>
 
             <NavbarMenu />
