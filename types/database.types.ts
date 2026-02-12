@@ -39,6 +39,62 @@ export type Database = {
   };
   public: {
     Tables: {
+      appointments: {
+        Row: {
+          amount: number | null;
+          appointment_at: string | null;
+          category_name: string;
+          client_id: string | null;
+          client_name: string;
+          client_phone: string;
+          created_at: string;
+          id: string;
+          notes: string | null;
+          service_name: string;
+          status: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          amount?: number | null;
+          appointment_at?: string | null;
+          category_name: string;
+          client_id?: string | null;
+          client_name: string;
+          client_phone: string;
+          created_at?: string;
+          id?: string;
+          notes?: string | null;
+          service_name: string;
+          status: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          amount?: number | null;
+          appointment_at?: string | null;
+          category_name?: string;
+          client_id?: string | null;
+          client_name?: string;
+          client_phone?: string;
+          created_at?: string;
+          id?: string;
+          notes?: string | null;
+          service_name?: string;
+          status?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "appointments_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       categories: {
         Row: {
           category_name: string;
@@ -94,7 +150,7 @@ export type Database = {
           user_id: string;
         };
         Insert: {
-          category_id: string | null;
+          category_id?: string | null;
           created_at?: string;
           id?: string;
           name: string;
@@ -124,7 +180,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      archive_unconfirmed_appointments: {
+        Args: { stale_interval?: unknown };
+        Returns: number;
+      };
     };
     Enums: {
       [_ in never]: never;
