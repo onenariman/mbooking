@@ -1,46 +1,44 @@
 "use client";
 
-import { useState } from "react";
-import dynamic from "next/dynamic";
-
 import StatisticCard from "./Statistic/StatisticCard";
 import { FilterCategory } from "./Filters/FilterCategory";
 import { FilterStatus } from "./Filters/FilterStatus";
-import { FilterDate } from "./Filters/FilterDate";
 import AppointmentsList from "./Appointment/AppointmentsList";
+import { Button } from "../ui/button";
+import dynamic from "next/dynamic";
+import { Spinner } from "../ui/spinner";
 
 const AddBook = dynamic(() => import("./AddBook/AddBook"), {
   ssr: false,
+  loading: () => (
+    <Button disabled variant="destructive">
+      Загрузка
+      <Spinner />
+    </Button>
+  ),
+});
+
+const FilterDate = dynamic(() => import("./Filters/FilterDate"), {
+  ssr: false,
+  loading: () => (
+    <Button disabled variant="secondary">
+      Загрузка
+      <Spinner />
+    </Button>
+  ),
 });
 
 const ReceptionComponents = () => {
-  const [category, setCategory] = useState<
-    "all" | "electro" | "cosmetology" | "massage" | "laser"
-  >("all");
-  const [status, setStatus] = useState<
-    "all" | "pending" | "confirmed" | "cancelled"
-  >("all");
-  const [dateFrom, setDateFrom] = useState<Date | null>(null);
-  const [dateTo, setDateTo] = useState<Date | null>(null);
-
   return (
-    <div className="w-full flex flex-col gap-y-2">
+    <div className="flex flex-col gap-y-4">
+      <FilterCategory />
+      <FilterStatus />
       <StatisticCard />
-      <AddBook />
-      <FilterCategory onChange={setCategory} />
-      <FilterStatus onChange={setStatus} />
-      <FilterDate
-        onChange={(from, to) => {
-          setDateFrom(from);
-          setDateTo(to);
-        }}
-      />
-      <AppointmentsList
-        categoryFilter={category}
-        statusFilter={status}
-        dateFrom={dateFrom}
-        dateTo={dateTo}
-      />
+      <div className="flex flex-col gap-y-2">
+        <AddBook />
+        <FilterDate />
+      </div>
+      <AppointmentsList />
     </div>
   );
 };

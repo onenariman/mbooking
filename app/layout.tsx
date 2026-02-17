@@ -5,23 +5,21 @@ import { Toaster } from "@/components/ui/sonner";
 import type { Metadata } from "next";
 import { TanstackProvider } from "@/components/providers/tanstack-provider";
 import { Devtools } from "@/src/devtools/devtools";
-import { Playwrite_CU_Guides } from "next/font/google";
 import { Geist, Geist_Mono, Noto_Sans } from "next/font/google";
 
-const notoSans = Noto_Sans({ variable: "--font-sans" });
+const notoSans = Noto_Sans({
+  variable: "--font-sans",
+  subsets: ["latin", "cyrillic"],
+});
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
-  subsets: ["latin"],
+  subsets: ["latin", "cyrillic"],
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const playwrite = Playwrite_CU_Guides({
-  weight: "400",
+  subsets: ["latin", "cyrillic"],
 });
 
 export const metadata: Metadata = {
@@ -41,21 +39,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ru" className={notoSans.variable}>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} ${playwrite} antialiased`}
-      >
+    <html
+      lang="ru"
+      className={`${notoSans.variable} ${geistSans.variable} ${geistMono.variable}`}
+    >
+      <body>
+        {/* subpixel-antialiased обычно четче на Windows/Chrome */}
         <header className="mx-auto max-w-5xl px-4 mt-5">
           <nav className="flex items-center justify-between">
             <Link href="/">
-              <button
-                style={{ fontFamily: playwrite.style.fontFamily }}
+              <span // Используй span или div вместо button, если это просто ссылка-логотип
                 className="text-2xl font-medium tracking-wide hover:opacity-80 transition-opacity cursor-pointer"
               >
                 Reception
-              </button>
+              </span>
             </Link>
-
             <NavbarMenu />
           </nav>
         </header>

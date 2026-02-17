@@ -44,7 +44,6 @@ export type Database = {
           amount: number | null;
           appointment_at: string | null;
           category_name: string;
-          client_id: string | null;
           client_name: string;
           client_phone: string;
           created_at: string;
@@ -52,14 +51,12 @@ export type Database = {
           notes: string | null;
           service_name: string;
           status: string;
-          updated_at: string;
           user_id: string;
         };
         Insert: {
           amount?: number | null;
           appointment_at?: string | null;
           category_name: string;
-          client_id?: string | null;
           client_name: string;
           client_phone: string;
           created_at?: string;
@@ -67,14 +64,12 @@ export type Database = {
           notes?: string | null;
           service_name: string;
           status: string;
-          updated_at?: string;
           user_id: string;
         };
         Update: {
           amount?: number | null;
           appointment_at?: string | null;
           category_name?: string;
-          client_id?: string | null;
           client_name?: string;
           client_phone?: string;
           created_at?: string;
@@ -82,18 +77,9 @@ export type Database = {
           notes?: string | null;
           service_name?: string;
           status?: string;
-          updated_at?: string;
           user_id?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: "appointments_client_id_fkey";
-            columns: ["client_id"];
-            isOneToOne: false;
-            referencedRelation: "clients";
-            referencedColumns: ["id"];
-          },
-        ];
+        Relationships: [];
       };
       categories: {
         Row: {

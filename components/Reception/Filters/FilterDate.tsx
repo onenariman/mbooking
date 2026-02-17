@@ -1,66 +1,140 @@
 "use client";
 
 import * as React from "react";
-import { Button } from "@/components/ui/button";
+import { ru } from "date-fns/locale";
+import { format } from "date-fns";
+import { type DateRange } from "react-day-picker";
 
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
-  PopoverTrigger,
   PopoverContent,
+  PopoverTrigger,
 } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon } from "lucide-react";
 
-interface FilterDateProps {
-  onChange: (from: Date | null, to: Date | null) => void;
-}
+type Props = {
+  onChange?: (fromISO: string | null, toISO: string | null) => void;
+};
 
-export function FilterDate({ onChange }: FilterDateProps) {
-  // Текущие даты по умолчанию
-  const [date1, setDate1] = React.useState<Date>(new Date());
-  const [date2, setDate2] = React.useState<Date>(new Date());
+export default function FilterDate({ onChange }: Props) {
+  const [open, setOpen] = React.useState(false);
+  const [range, setRange] = React.useState<DateRange | undefined>();
 
-  // функция для красивого отображения даты
-  const formatDate = (date: Date) => date.toLocaleDateString("ru-RU"); // дд.мм.гггг
+  const today = React.useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+
+  /**
+   * Приводим дату к началу дня (локально)
+   */
+  const startOfDay = (date: Date) => {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
+  /**
+   * Приводим дату к концу дня (локально)
+   */
+  const endOfDay = (date: Date) => {
+    const d = new Date(date);
+    d.setHours(23, 59, 59, 999);
+    return d;
+  };
+
+  const handleApply = () => {
+    if (!onChange) return;
+
+    if (!range?.from) {
+      onChange(null, null);
+      setOpen(false);
+      return;
+    }
+
+    const from = startOfDay(range.from);
+    const to = range.to ? endOfDay(range.to) : endOfDay(range.from);
+
+    onChange(from.toISOString(), to.toISOString());
+    setOpen(false);
+  };
+
+  const renderLabel = () => {
+    if (!range?.from) {
+      return <span>Фильтр по датам</span>;
+    }
+
+    if (!range.to) {
+      return format(range.from, "dd.MM.yyyy", { locale: ru });
+    }
+
+    return (
+      <>
+        {format(range.from, "dd.MM.yyyy", { locale: ru })} –{" "}
+        {format(range.to, "dd.MM.yyyy", { locale: ru })}
+      </>
+    );
+  };
 
   return (
-    <div className="flex items-center gap-x-2">
-      {/* Первая дата */}
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="outline">{formatDate(date1)}</Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0">
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className="justify-center w-full font-normal"
+          type="button"
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {renderLabel()}
+        </Button>
+      </PopoverTrigger>
+
+      <PopoverContent
+        className="w-auto p-0"
+        align="center"
+        side="bottom"
+        sideOffset={-400} // Небольшой отступ от кнопки
+        avoidCollisions={false}
+      >
+        <div className="p-4 flex flex-col gap-4">
+          <div className="space-y-1">
+            <h4 className="font-medium leading-none">Выберите период</h4>
+            <p className="text-xs text-muted-foreground">
+              Диапазон дат для фильтрации записей.
+            </p>
+          </div>
+
           <Calendar
-            mode="single"
-            selected={date1}
-            onSelect={(date) => date && setDate1(date)} // только обновляем state
-            className="rounded-lg border"
+            mode="range"
+            locale={ru}
+            defaultMonth={range?.from ?? today}
+            selected={range}
+            onSelect={setRange}
+            className="rounded-md border shadow-sm"
           />
-        </PopoverContent>
-      </Popover>
 
-      <span>—</span>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setOpen(false)}
+            >
+              Отмена
+            </Button>
 
-      {/* Вторая дата */}
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="outline">{formatDate(date2)}</Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0">
-          <Calendar
-            mode="single"
-            selected={date2}
-            onSelect={(date) => date && setDate2(date)} // только обновляем state
-            className="rounded-lg border"
-            captionLayout="label"
-          />
-        </PopoverContent>
-      </Popover>
-
-      {/* Кнопка "Показать" */}
-      <Button size="sm" onClick={() => onChange(date1, date2)}>
-        Применить
-      </Button>
-    </div>
+            <Button
+              className="flex-1"
+              disabled={!range?.from}
+              onClick={handleApply}
+            >
+              ОК
+            </Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
