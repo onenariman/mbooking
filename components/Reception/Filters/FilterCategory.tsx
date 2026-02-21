@@ -1,31 +1,54 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { Spinner } from "@/components/ui/spinner";
+import { useCategories } from "@/src/hooks/categories.hooks";
 
-export function FilterCategory() {
-  const categories = [
-    { label: "Все услуги", value: "all" },
-    { label: "Электроэпиляция", value: "electro" },
-    { label: "Косметология", value: "cosmetology" },
-  ];
+interface FilterCategoryProps {
+  value: string;
+  onChange: (value: string) => void;
+}
 
-  const [selected, setSelected] = useState("all");
+export function FilterCategory({ value, onChange }: FilterCategoryProps) {
+  const { data: categories = [], isLoading, isError } = useCategories();
 
-  // const handleClick = (value: any) => {
-  //   setSelected(value);
-  //   onChange(value);
-  // };
+  if (isLoading) {
+    return (
+      <div className="flex gap-2 pb-2">
+        <Spinner className="h-4 w-4" />
+        <span className="text-xs text-muted-foreground">
+          Загрузка категорий...
+        </span>
+      </div>
+    );
+  }
+
+  if (isError) return null;
 
   return (
-    <div className="flex gap-2 overflow-x-auto">
-      {categories.map((c) => (
+    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+      {/* Кнопка "Все" всегда первая */}
+      <Button
+        type="button"
+        size="sm"
+        variant={value === "all" ? "default" : "secondary"}
+        onClick={() => onChange("all")}
+        className="whitespace-nowrap rounded-full"
+      >
+        Все услуги
+      </Button>
+
+      {/* Динамические категории из базы */}
+      {categories.map((category) => (
         <Button
-          key={c.value}
-          variant={selected === c.value ? "default" : "secondary"}
-          // onClick={() => handleClick(c.value)}
+          key={category.id}
+          type="button"
+          size="sm"
+          variant={value === category.category_name ? "default" : "secondary"}
+          onClick={() => onChange(category.category_name)}
+          className="whitespace-nowrap rounded-full"
         >
-          {c.label}
+          {category.category_name}
         </Button>
       ))}
     </div>

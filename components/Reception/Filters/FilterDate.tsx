@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { ru } from "date-fns/locale";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay } from "date-fns";
 import { type DateRange } from "react-day-picker";
 
 import { Button } from "@/components/ui/button";
@@ -20,56 +20,28 @@ type Props = {
 
 export default function FilterDate({ onChange }: Props) {
   const [open, setOpen] = React.useState(false);
-  const [range, setRange] = React.useState<DateRange | undefined>();
-
-  const today = React.useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, []);
-
-  /**
-   * Приводим дату к началу дня (локально)
-   */
-  const startOfDay = (date: Date) => {
-    const d = new Date(date);
-    d.setHours(0, 0, 0, 0);
-    return d;
-  };
-
-  /**
-   * Приводим дату к концу дня (локально)
-   */
-  const endOfDay = (date: Date) => {
-    const d = new Date(date);
-    d.setHours(23, 59, 59, 999);
-    return d;
-  };
+  const [range, setRange] = React.useState<DateRange | undefined>({
+    from: new Date(),
+    to: new Date(),
+  });
 
   const handleApply = () => {
     if (!onChange) return;
 
     if (!range?.from) {
       onChange(null, null);
-      setOpen(false);
-      return;
+    } else {
+      // Приводим к 00:00:00 и 23:59:59 именно локального дня
+      const from = startOfDay(range.from).toISOString();
+      const to = endOfDay(range.to || range.from).toISOString();
+      onChange(from, to);
     }
-
-    const from = startOfDay(range.from);
-    const to = range.to ? endOfDay(range.to) : endOfDay(range.from);
-
-    onChange(from.toISOString(), to.toISOString());
     setOpen(false);
   };
 
   const renderLabel = () => {
-    if (!range?.from) {
-      return <span>Фильтр по датам</span>;
-    }
-
-    if (!range.to) {
-      return format(range.from, "dd.MM.yyyy", { locale: ru });
-    }
+    if (!range?.from) return <span>Фильтр по датам</span>;
+    if (!range.to) return format(range.from, "dd.MM.yyyy", { locale: ru });
 
     return (
       <>
@@ -92,27 +64,21 @@ export default function FilterDate({ onChange }: Props) {
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent
-        className="w-auto p-0"
-        align="center"
-        side="bottom"
-        sideOffset={-400} // Небольшой отступ от кнопки
-        avoidCollisions={false}
-      >
+      <PopoverContent className="w-auto p-0" align="center">
         <div className="p-4 flex flex-col gap-4">
           <div className="space-y-1">
-            <h4 className="font-medium leading-none">Выберите период</h4>
+            <h4 className="font-medium">Выберите период</h4>
             <p className="text-xs text-muted-foreground">
-              Диапазон дат для фильтрации записей.
+              Записи будут отфильтрованы по этому диапазону.
             </p>
           </div>
 
           <Calendar
             mode="range"
             locale={ru}
-            defaultMonth={range?.from ?? today}
             selected={range}
             onSelect={setRange}
+            initialFocus
             className="rounded-md border shadow-sm"
           />
 
@@ -120,9 +86,13 @@ export default function FilterDate({ onChange }: Props) {
             <Button
               variant="outline"
               className="flex-1"
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                setRange(undefined);
+                onChange?.(null, null);
+                setOpen(false);
+              }}
             >
-              Отмена
+              Сбросить
             </Button>
 
             <Button
@@ -130,7 +100,7 @@ export default function FilterDate({ onChange }: Props) {
               disabled={!range?.from}
               onClick={handleApply}
             >
-              ОК
+              Применить
             </Button>
           </div>
         </div>

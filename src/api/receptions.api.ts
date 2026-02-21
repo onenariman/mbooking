@@ -3,26 +3,33 @@ import { ZodAppointment } from "../schemas/books/bookSchema";
 
 const supabase = createClient();
 
-/**
- * Получение всех записей
- */
-export const fetchAppointments = async (): Promise<ZodAppointment[]> => {
-  const { data, error } = await supabase
+export const fetchAppointments = async ({
+  from,
+  to,
+}: {
+  from: string | null;
+  to: string | null;
+}) => {
+  let query = supabase
     .from("appointments")
     .select("*")
-    .order("appointment_at", { ascending: true }); // Сортировка по времени записи
+    .order("appointment_at", { ascending: true });
 
-  if (error) {
-    throw new Error(error.message);
+  if (from) {
+    query = query.gte("appointment_at", from);
   }
 
-  return data as ZodAppointment[];
+  if (to) {
+    query = query.lte("appointment_at", to);
+  }
+
+  const { data, error } = await query;
+
+  if (error) throw error;
+
+  return data;
 };
 
-/**
- * Добавление новой записи
- * Принимает Partial, так как id и created_at генерируются базой
- */
 export const addAppointment = async (
   appointment: Partial<ZodAppointment>,
 ): Promise<ZodAppointment> => {

@@ -38,7 +38,7 @@ type FormState = {
   client_name: string | null;
   client_phone: string | null;
   service_name: string | null;
-  appointment_at: string | null; // ISO string
+  appointment_at: string | null;
   amount: number | null;
   notes: string | null;
 };
@@ -59,36 +59,25 @@ export default function AddBook() {
   const { data: clients = [] } = useClients();
   const { data: services = [] } = useServices();
   const { data: categories = [] } = useCategories();
+
+  // Используем наш обновленный хук с invalidateQueries
   const { mutate: addAppointment, isPending } = useAddAppointment();
 
-  // Вычисляем категорию автоматически
   const category_name = useMemo(() => {
     if (!form.service_name) return "Без категории";
-
     const service = services.find((s) => s.name === form.service_name);
     const category = categories.find((c) => c.id === service?.category_id);
-
     return category?.category_name ?? "Без категории";
   }, [form.service_name, services, categories]);
 
   const resetForm = () => setForm(initialState);
 
-  const handleOpenChange = (state: boolean) => {
-    setOpen(state);
-    if (!state) resetForm();
-  };
-
   const handleSubmit = () => {
     if (isPending) return;
 
-    // ✅ Проверка обязательных полей
-    if (
-      !form.client_name?.trim() ||
-      !form.client_phone?.trim() ||
-      !form.service_name?.trim() ||
-      !form.appointment_at?.trim()
-    ) {
-      toast.error("Заполните все обязательные поля: клиент, услуга и дата");
+    // Валидация полей
+    if (!form.client_name || !form.service_name || !form.appointment_at) {
+      toast.error("Заполните обязательные поля: клиент, услуга и дата");
       return;
     }
 
@@ -98,123 +87,118 @@ export default function AddBook() {
       status: "booked" as ZodAppointmentStatus,
     };
 
-    // ✅ Валидация через createAppointmentSchema
     const result = createAppointmentSchema.safeParse(payload);
-
     if (!result.success) {
-      const msg = result.error.issues.map((i) => i.message).join(", ");
-      toast.error(msg);
+      toast.error(result.error.issues[0].message);
       return;
     }
-
-    console.log("Payload для Supabase:", result.data);
 
     addAppointment(result.data, {
       onSuccess: () => {
         toast.success("Запись успешно создана");
         setOpen(false);
         resetForm();
+        // Список обновится автоматически благодаря invalidateQueries в хуке
       },
-      onError: (error: unknown) => {
+      onError: (err: unknown) => {
+        // Проверяем, является ли err объектом Error, чтобы безопасно прочитать message
         const message =
-          error instanceof Error ? error.message : "Неизвестная ошибка";
+          err instanceof Error ? err.message : "Ошибка при сохранении";
         toast.error(message);
       },
     });
   };
 
   return (
-    <Sheet open={open} onOpenChange={handleOpenChange}>
+    <Sheet
+      open={open}
+      onOpenChange={(val) => {
+        setOpen(val);
+        if (!val) resetForm();
+      }}
+    >
       <SheetTrigger asChild>
-        <Button className="w-full">Добавить запись</Button>
+        <Button className="w-full shadow-md" size="lg">
+          Добавить запись
+        </Button>
       </SheetTrigger>
 
       <SheetContent
         side="top"
-        className="overflow-y-auto max-h-screen px-5"
-        onOpenAutoFocus={(e) => e.preventDefault()}
+        className="overflow-y-auto max-h-[90vh] rounded-b-3xl"
       >
         <SheetHeader>
           <SheetTitle>Новая запись</SheetTitle>
-          <SheetDescription>Заполните обязательные поля</SheetDescription>
+          <SheetDescription>
+            Введите данные клиента и время приема
+          </SheetDescription>
         </SheetHeader>
 
-        <div className="py-4 flex flex-col gap-5">
-          {/* Дата и время */}
+        <div className="py-6 flex flex-col gap-6">
           <DateBook
             value={form.appointment_at}
-            onChange={(val) =>
-              setForm((prev) => ({ ...prev, appointment_at: val || null }))
-            }
+            onChange={(val) => setForm((p) => ({ ...p, appointment_at: val }))}
           />
 
-          {/* Клиент */}
           <SearchClient
             clients={clients}
-            getClient={(client) =>
-              setForm((prev) => ({
-                ...prev,
-                client_name: client.name,
-                client_phone: client.phone,
+            getClient={(c) =>
+              setForm((p) => ({
+                ...p,
+                client_name: c.name,
+                client_phone: c.phone,
               }))
             }
           />
 
-          {/* Услуга */}
           <SearchService
             services={services}
-            getService={(service) =>
-              setForm((prev) => ({ ...prev, service_name: service.name }))
-            }
+            getService={(s) => setForm((p) => ({ ...p, service_name: s.name }))}
           />
 
-          {/* Стоимость */}
-          <div className="flex flex-col gap-2">
-            <Label className="text-xs italic">
-              Стоимость (если отличается)
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground uppercase font-bold">
+              Стоимость
             </Label>
             <Input
+              placeholder="0"
               value={form.amount ?? ""}
               onChange={(e) => {
                 const formatted = formatPriceInput(e.target.value);
                 const numeric = formatted.replace(/\s/g, "");
-                setForm((prev) => ({
-                  ...prev,
+                setForm((p) => ({
+                  ...p,
                   amount: numeric ? Number(numeric) : null,
                 }));
               }}
             />
           </div>
 
-          {/* Комментарий */}
-          <Textarea
-            className="resize-none"
-            placeholder="Комментарий"
-            value={form.notes ?? ""}
-            onChange={(e) =>
-              setForm((prev) => ({ ...prev, notes: e.target.value || null }))
-            }
-          />
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground uppercase font-bold">
+              Комментарий
+            </Label>
+            <Textarea
+              className="resize-none"
+              placeholder="Дополнительная информация..."
+              value={form.notes ?? ""}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, notes: e.target.value }))
+              }
+            />
+          </div>
         </div>
 
-        <SheetFooter className="flex flex-col gap-2 sm:flex-row">
+        <SheetFooter className="flex flex-col gap-2">
           <Button
             onClick={handleSubmit}
             disabled={isPending}
-            className="w-full sm:w-auto"
+            className="w-full"
           >
-            {isPending ? (
-              <>
-                <Spinner className="mr-2 h-4 w-4" />
-                Сохраняем...
-              </>
-            ) : (
-              "Сохранить запись"
-            )}
+            {isPending ? <Spinner className="mr-2" /> : "Подтвердить запись"}
           </Button>
-
           <SheetClose asChild>
-            <Button variant="outline" className="w-full sm:w-auto">
+            <Button variant="ghost" className="w-full">
               Отмена
             </Button>
           </SheetClose>

@@ -1,7 +1,10 @@
 "use client";
 
 import * as React from "react";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 import { ru } from "date-fns/locale";
+
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,15 +15,24 @@ import {
 import { CalendarSearch, ChevronDownIcon } from "lucide-react";
 import { Label } from "@/components/ui/label";
 
+dayjs.extend(utc);
+
 type DateBookProps = {
-  value: string | null; // локальная дата в формате "YYYY-MM-DDTHH:mm:00"
+  value: string | null; // ISO string (UTC)
   onChange: (val: string | null) => void;
 };
 
 export default function DateBook({ value, onChange }: DateBookProps) {
+  const getCurrentTime = () => dayjs().format("HH:mm");
   const [open, setOpen] = React.useState(false);
-  const [date, setDate] = React.useState<Date | undefined>();
-  const [time, setTime] = React.useState("12:00");
+  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>();
+  const [time, setTime] = React.useState(getCurrentTime);
+
+  React.useEffect(() => {
+    if (open) {
+      setTime(dayjs().format("HH:mm"));
+    }
+  }, [open]);
 
   const today = React.useMemo(() => {
     const d = new Date();
@@ -28,55 +40,46 @@ export default function DateBook({ value, onChange }: DateBookProps) {
     return d;
   }, []);
 
-  // синхронизация с внешним value
+  // Синхронизация с внешним ISO
   React.useEffect(() => {
     if (!value) return;
-    const dt = new Date(value);
-    setDate(dt);
-    setTime(
-      `${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`,
-    );
+
+    const local = dayjs(value).local();
+    setSelectedDate(local.toDate());
+    setTime(local.format("HH:mm"));
   }, [value]);
 
-  // Генерация локальной строки для хранения без UTC смещения
-  const getLocalISOString = (date: Date, time: string) => {
+  // Объединяем дату и время
+  const combined = React.useMemo(() => {
+    if (!selectedDate) return null;
+
     const [hours, minutes] = time.split(":").map(Number);
-    const d = new Date(date);
-    d.setHours(hours, minutes, 0, 0);
 
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    const hh = String(d.getHours()).padStart(2, "0");
-    const min = String(d.getMinutes()).padStart(2, "0");
-
-    return `${yyyy}-${mm}-${dd}T${hh}:${min}:00`; // локальное время без Z
-  };
-
-  const selectedDateTime = React.useMemo(() => {
-    if (!date || !time) return null;
-    return getLocalISOString(date, time);
-  }, [date, time]);
+    return dayjs(selectedDate)
+      .hour(hours)
+      .minute(minutes)
+      .second(0)
+      .millisecond(0);
+  }, [selectedDate, time]);
 
   const isPastTime = React.useMemo(() => {
-    if (!date || !time) return false;
-    const [hours, minutes] = time.split(":").map(Number);
-    const d = new Date(date);
-    d.setHours(hours, minutes, 0, 0);
-    return d.getTime() < new Date().getTime();
-  }, [date, time]);
+    if (!combined) return false;
+    return combined.isBefore(dayjs());
+  }, [combined]);
 
   const handleApply = () => {
-    if (!selectedDateTime || isPastTime) return;
-    onChange(selectedDateTime); // сохраняем локальное время в форме
+    if (!combined) return;
+
+    // 👉 ВАЖНО: сохраняем в UTC
+    const isoUTC = combined.utc().toISOString();
+
+    onChange(isoUTC);
     setOpen(false);
   };
 
   const renderLabel = () => {
-    if (!selectedDateTime) return "Выберите дату и время";
-    const [datePart, timePart] = selectedDateTime.split("T");
-    const [yyyy, mm, dd] = datePart.split("-");
-    return `${dd}.${mm}.${yyyy} ${timePart.slice(0, 5)}`;
+    if (!combined) return "Выберите дату и время";
+    return combined.format("DD.MM.YYYY HH:mm");
   };
 
   return (
@@ -101,22 +104,22 @@ export default function DateBook({ value, onChange }: DateBookProps) {
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <div className="space-y-2">
-          <h4 className="font-medium leading-none">Дата и время</h4>
+          <h4 className="font-medium">Дата и время</h4>
           <p className="text-sm text-muted-foreground">
-            Выберите день и время записи.
+            Выберите день и время записи
           </p>
         </div>
 
         <Calendar
           mode="single"
-          selected={date}
-          onSelect={setDate}
+          selected={selectedDate}
+          onSelect={setSelectedDate}
           disabled={{ before: today }}
           locale={ru}
           className="rounded-md border w-fit mx-auto"
         />
 
-        <div className="flex items-center justify-center border gap-2 bg-gray-100 px-3 py-1 rounded-4xl">
+        <div className="flex items-center justify-center border gap-2 bg-gray-100 px-3 py-1 rounded-2xl">
           <Label className="text-xs text-muted-foreground">Время:</Label>
           <input
             type="time"
@@ -126,16 +129,16 @@ export default function DateBook({ value, onChange }: DateBookProps) {
           />
         </div>
 
-        {selectedDateTime && isPastTime && (
+        {combined && isPastTime && (
           <p className="text-red-500 text-center text-xs font-medium">
-            ⚠️ Время в прошлом
+            ⚠ Время в прошлом
           </p>
         )}
 
         <div className="flex gap-2 pt-2">
           <Button
             className="flex-1"
-            disabled={!selectedDateTime || isPastTime}
+            disabled={!combined || isPastTime}
             onClick={handleApply}
           >
             Применить
