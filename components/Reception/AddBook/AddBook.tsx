@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
+import dayjs from "dayjs";
 import { toast } from "sonner";
 
 import { useClients } from "@/src/hooks/clients.hooks";
@@ -16,7 +17,6 @@ import {
   createAppointmentSchema,
   ZodAppointmentStatus,
 } from "@/src/schemas/books/bookSchema";
-
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -34,14 +34,15 @@ import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { formatPriceInput } from "@/src/validators/formatPriceInput";
 
-type FormState = {
+// ЯВНОЕ ОПРЕДЕЛЕНИЕ ТИПОВ (решает твою ошибку)
+interface FormState {
   client_name: string | null;
   client_phone: string | null;
   service_name: string | null;
   appointment_at: string | null;
   amount: number | null;
   notes: string | null;
-};
+}
 
 const initialState: FormState = {
   client_name: null,
@@ -54,40 +55,44 @@ const initialState: FormState = {
 
 export default function AddBook() {
   const [open, setOpen] = useState(false);
+
+  // Указываем тип FormState для useState
   const [form, setForm] = useState<FormState>(initialState);
 
   const { data: clients = [] } = useClients();
   const { data: services = [] } = useServices();
   const { data: categories = [] } = useCategories();
-
-  // Используем наш обновленный хук с invalidateQueries
   const { mutate: addAppointment, isPending } = useAddAppointment();
 
-  const category_name = useMemo(() => {
-    if (!form.service_name) return "Без категории";
-    const service = services.find((s) => s.name === form.service_name);
-    const category = categories.find((c) => c.id === service?.category_id);
-    return category?.category_name ?? "Без категории";
-  }, [form.service_name, services, categories]);
+  const handleDateChange = useCallback((val: string | null) => {
+    setForm((prev) =>
+      prev.appointment_at === val ? prev : { ...prev, appointment_at: val },
+    );
+  }, []);
 
-  const resetForm = () => setForm(initialState);
+  const isTimeInvalid = useMemo(() => {
+    if (!form.appointment_at) return false;
+    return dayjs(form.appointment_at).isBefore(dayjs().subtract(1, "minute"));
+  }, [form.appointment_at]);
 
   const handleSubmit = () => {
-    if (isPending) return;
-
-    // Валидация полей
+    if (isPending || isTimeInvalid) return;
     if (!form.client_name || !form.service_name || !form.appointment_at) {
-      toast.error("Заполните обязательные поля: клиент, услуга и дата");
+      toast.error("Заполните обязательные поля");
       return;
     }
+
+    const service = services.find((s) => s.name === form.service_name);
+    const category = categories.find((c) => c.id === service?.category_id);
+    const category_name = category?.category_name ?? "Без категории";
 
     const payload = {
       ...form,
       category_name,
       status: "booked" as ZodAppointmentStatus,
     };
-
     const result = createAppointmentSchema.safeParse(payload);
+
     if (!result.success) {
       toast.error(result.error.issues[0].message);
       return;
@@ -95,50 +100,37 @@ export default function AddBook() {
 
     addAppointment(result.data, {
       onSuccess: () => {
-        toast.success("Запись успешно создана");
+        toast.success("Запись создана");
         setOpen(false);
-        resetForm();
-        // Список обновится автоматически благодаря invalidateQueries в хуке
+        setForm(initialState);
       },
-      onError: (err: unknown) => {
-        // Проверяем, является ли err объектом Error, чтобы безопасно прочитать message
-        const message =
-          err instanceof Error ? err.message : "Ошибка при сохранении";
-        toast.error(message);
-      },
+      onError: (err) =>
+        toast.error(err instanceof Error ? err.message : "Ошибка"),
     });
   };
 
   return (
-    <Sheet
-      open={open}
-      onOpenChange={(val) => {
-        setOpen(val);
-        if (!val) resetForm();
-      }}
-    >
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button className="w-full shadow-md" size="lg">
+        <Button className="w-full shadow-lg" size="lg">
           Добавить запись
         </Button>
       </SheetTrigger>
-
       <SheetContent
         side="top"
-        className="overflow-y-auto max-h-[90vh] rounded-b-3xl"
+        className="overflow-y-auto min-h-fit rounded-b-[2.5rem] px-6 border-none bg-background max-w-5xl mx-auto"
       >
-        <SheetHeader>
-          <SheetTitle>Новая запись</SheetTitle>
-          <SheetDescription>
-            Введите данные клиента и время приема
+        <SheetHeader className="pt-2 pb-4 text-left border-b">
+          <SheetTitle className="text-2xl font-black text-primary">
+            Новая запись
+          </SheetTitle>
+          <SheetDescription className="text-sm opacity-60">
+            Детали визита
           </SheetDescription>
         </SheetHeader>
 
-        <div className="py-6 flex flex-col gap-6">
-          <DateBook
-            value={form.appointment_at}
-            onChange={(val) => setForm((p) => ({ ...p, appointment_at: val }))}
-          />
+        <div className="py-6 flex flex-col gap-y-2">
+          <DateBook value={form.appointment_at} onChange={handleDateChange} />
 
           <SearchClient
             clients={clients}
@@ -150,55 +142,39 @@ export default function AddBook() {
               }))
             }
           />
-
           <SearchService
             services={services}
             getService={(s) => setForm((p) => ({ ...p, service_name: s.name }))}
           />
-
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground uppercase font-bold">
-              Стоимость
-            </Label>
-            <Input
-              placeholder="0"
-              value={form.amount ?? ""}
-              onChange={(e) => {
-                const formatted = formatPriceInput(e.target.value);
-                const numeric = formatted.replace(/\s/g, "");
-                setForm((p) => ({
-                  ...p,
-                  amount: numeric ? Number(numeric) : null,
-                }));
-              }}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground uppercase font-bold">
-              Комментарий
-            </Label>
-            <Textarea
-              className="resize-none"
-              placeholder="Дополнительная информация..."
-              value={form.notes ?? ""}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, notes: e.target.value }))
-              }
-            />
-          </div>
+          <Input
+            placeholder="Стоимость (₽)"
+            value={form.amount ?? ""}
+            onChange={(e) => {
+              const numeric = formatPriceInput(e.target.value).replace(
+                /\s/g,
+                "",
+              );
+              setForm((p) => ({
+                ...p,
+                amount: numeric ? Number(numeric) : null,
+              }));
+            }}
+          />
+          <Label>Комментарий</Label>
+          <Textarea
+            placeholder="Заметки..."
+            value={form.notes ?? ""}
+            onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
+          />
         </div>
 
-        <SheetFooter className="flex flex-col gap-2">
-          <Button
-            onClick={handleSubmit}
-            disabled={isPending}
-            className="w-full"
-          >
-            {isPending ? <Spinner className="mr-2" /> : "Подтвердить запись"}
+        <SheetFooter className="pt-4 pb-8 flex flex-col gap-3 border-t">
+          <Button onClick={handleSubmit} disabled={isPending || isTimeInvalid}>
+            {isPending ? <Spinner className="mr-2" /> : "Забронировать визит"}
           </Button>
+
           <SheetClose asChild>
-            <Button variant="ghost" className="w-full">
+            <Button variant="outline" className="w-full">
               Отмена
             </Button>
           </SheetClose>

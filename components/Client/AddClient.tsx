@@ -70,7 +70,7 @@ const AddClient = () => {
   // const isFormInvalid = !name.trim() || clientPhone.length !== 10 || isPending;
 
   return (
-    <Card className="rounded-lg">
+    <Card>
       <CardHeader className="flex flex-col gap-y-1">
         <CardTitle>Добавить клиента</CardTitle>
         <CardDescription>Введите имя и номер телефона клиента</CardDescription>

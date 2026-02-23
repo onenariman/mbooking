@@ -1,5 +1,7 @@
 "use client";
 
+import { AlertCircle, RefreshCcw } from "lucide-react"; // Иконки для красоты
+import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandGroup,
@@ -12,12 +14,13 @@ import {
 import ItemBook from "./ItemBook";
 import { useAppointments } from "@/src/hooks/appointments.hooks";
 import { ZodAppointment } from "@/src/schemas/books/bookSchema";
+import { Spinner } from "@/components/ui/spinner";
 
 interface BookListProps {
   from: string | null;
   to: string | null;
-  selectedCategory: string; // Добавили проп
-  selectedStatus: string; // Новый проп
+  selectedCategory: string;
+  selectedStatus: string;
 }
 
 export default function BookList({
@@ -31,39 +34,79 @@ export default function BookList({
     isLoading,
     isError,
     error,
+    refetch, // Достаем функцию перезапроса
   } = useAppointments({ from, to });
 
-  // ФИЛЬТРАЦИЯ: Оставляем только те записи, которые подходят под категорию
+  // 1. Обработка загрузки (Skeleton или Spinner)
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-10 gap-2">
+        <Spinner />
+        <p className="text-sm text-muted-foreground">Загрузка записей...</p>
+      </div>
+    );
+  }
+
+  // 2. Улучшенная обработка ошибки
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-10 px-4 border-2 border-dashed border-destructive/20 rounded-xl bg-destructive/5 gap-3">
+        <AlertCircle className="h-8 w-8 text-destructive" />
+        <div className="text-center">
+          <p className="font-semibold text-destructive">
+            Не удалось загрузить данные
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {error instanceof Error
+              ? error.message
+              : "Произошла неизвестная ошибка"}
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => refetch()}
+          className="gap-2"
+        >
+          <RefreshCcw size={14} />
+          Повторить попытку
+        </Button>
+      </div>
+    );
+  }
+
   const filtered = appointments.filter((book) => {
-    // 1. Фильтр по категории
     const matchCategory =
       selectedCategory === "all" || book.category_name === selectedCategory;
-
-    // 2. Фильтр по статусу
     const matchStatus =
       selectedStatus === "all" || book.status === selectedStatus;
-
-    // Запись проходит, если соответствует обоим фильтрам
     return matchCategory && matchStatus;
   });
 
-  if (isLoading) return <p className="text-center text-sm">Загрузка...</p>;
-
-  // Показываем отфильтрованные записи вместо всех
-  if (filtered.length === 0)
-    return <p className="text-center text-sm">Записи не найдены</p>;
+  // 3. Состояние "Пусто" (дифференцируем: вообще нет данных или всё скрыто фильтрами)
+  if (filtered.length === 0) {
+    return (
+      <div className="text-center py-10 border border-dashed rounded-xl">
+        <p className="text-sm text-muted-foreground">
+          {appointments.length > 0
+            ? "Нет записей, соответствующих фильтрам"
+            : "На выбранный период записей не найдено"}
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <Command>
-      <CommandInput placeholder="Найти запись" />
-      <CommandList>
-        <CommandEmpty>Записи не найдены</CommandEmpty>
+    <Command className="rounded-xl border shadow-sm">
+      <CommandInput placeholder="Поиск по имени клиента..." />
+      <CommandList className="max-h-none p-2">
+        <CommandEmpty>Ничего не найдено</CommandEmpty>
         <CommandGroup>
           {filtered.map((book: ZodAppointment) => (
             <CommandItem
               key={book.id}
               value={`${book.client_name} ${book.service_name}`}
-              className="border my-2 rounded-md"
+              className="border-b last:border-b-0 py-3 px-2 rounded-none first:rounded-t-md last:rounded-b-md"
             >
               <ItemBook book={book} />
             </CommandItem>

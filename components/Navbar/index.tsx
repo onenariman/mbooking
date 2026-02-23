@@ -20,17 +20,17 @@ const NavbarMenu = () => {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button className="cursor-pointer">
-            <Logs strokeWidth={1.5} size={28} className="mt-3" />
+            <Logs strokeWidth={1.5} size={28} />
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-56" align="start">
+        <DropdownMenuContent className="w-fit" align="end">
           <DropdownMenuGroup>
             <DropdownMenuItem>
               <Link href="/receptions">Ресепшен</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
-              <Link href="/categories">Категории услуг</Link>
+              <Link href="/categories">Категории</Link>
             </DropdownMenuItem>
             <DropdownMenuItem>
               <Link href="/services">Услуги</Link>

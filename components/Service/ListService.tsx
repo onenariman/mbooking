@@ -20,11 +20,9 @@ const ListService = () => {
     <>
       <Command>
         <CommandInput placeholder="Найти услугу" />
-
-        <CommandList className="my-5">
+        <CommandList className="mt-4">
           <CommandEmpty>Услуги не найдены</CommandEmpty>
-
-          <CommandGroup>
+          <CommandGroup className="h-fit">
             {services.map((service) => (
               <CommandItem
                 key={service.id}

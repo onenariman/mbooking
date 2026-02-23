@@ -58,13 +58,14 @@ export default function FilterDate({ onChange }: Props) {
           variant="outline"
           className="justify-center w-full font-normal"
           type="button"
+          size="lg"
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
           {renderLabel()}
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent className="w-auto p-0" align="center">
+      <PopoverContent className="w-fit" align="center">
         <div className="p-4 flex flex-col gap-4">
           <div className="space-y-1">
             <h4 className="font-medium">Выберите период</h4>
@@ -78,8 +79,8 @@ export default function FilterDate({ onChange }: Props) {
             locale={ru}
             selected={range}
             onSelect={setRange}
-            initialFocus
-            className="rounded-md border shadow-sm"
+            autoFocus
+            className="rounded-md border shadow-sm mx-auto"
           />
 
           <div className="flex gap-2">

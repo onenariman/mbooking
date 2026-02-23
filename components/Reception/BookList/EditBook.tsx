@@ -45,17 +45,14 @@ export function EditBook({
       });
       toast.success("Запись обновлена");
       onOpenChange(false);
-    } catch (error) {
+    } catch {
       toast.error("Ошибка при сохранении");
     }
   };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="top"
-        className="overflow-y-auto max-h-[90vh] rounded-b-3xl"
-      >
+      <SheetContent side="top" className="overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Изменить запись</SheetTitle>
           <SheetDescription>
@@ -63,13 +60,10 @@ export function EditBook({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="py-6 flex flex-col gap-6">
+        <div className=" px-6 flex flex-col gap-4">
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground uppercase font-bold">
-              Стоимость
-            </Label>
+            <Label>Стоимость</Label>
             <Input
-              placeholder="0"
               value={amount ?? ""}
               onChange={(e) => {
                 const formatted = formatPriceInput(e.target.value);
@@ -80,12 +74,8 @@ export function EditBook({
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground uppercase font-bold">
-              Комментарий
-            </Label>
+            <Label>Комментарий</Label>
             <Textarea
-              className="resize-none"
-              placeholder="Дополнительная информация..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
             />

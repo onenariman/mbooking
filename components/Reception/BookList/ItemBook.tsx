@@ -22,7 +22,7 @@ const statusLabels: Record<ZodAppointmentStatus, string> = {
 
 const ItemBook = ({ book }: ItemProps) => {
   return (
-    <div className="w-full flex justify-between items-start p-1">
+    <div className="w-full flex justify-between items-center p-1">
       <div className="flex flex-col gap-1">
         {/* Имя и услуга */}
         <div className="flex flex-col items-start">
