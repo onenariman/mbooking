@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { startOfDay, endOfDay } from "date-fns";
-
 import StatisticCard from "./Statistic/StatisticCard";
 import { FilterCategory } from "./Filters/FilterCategory";
 import { FilterStatus } from "./Filters/FilterStatus";
@@ -11,6 +9,7 @@ import { Button } from "../ui/button";
 import { Spinner } from "../ui/spinner";
 import BookList from "./BookList/BookList";
 import { ZodAppointmentStatus } from "@/src/schemas/books/bookSchema";
+import { startOfLocalDayUtcRange } from "@/src/lib/time";
 
 // Динамический импорт компонентов
 const AddBook = dynamic(() => import("./AddBook/AddBook"), {
@@ -35,10 +34,7 @@ export default function ReceptionComponents() {
   const [dateRange, setDateRange] = useState<{
     from: string | null;
     to: string | null;
-  }>({
-    from: startOfDay(new Date()).toISOString(),
-    to: endOfDay(new Date()).toISOString(),
-  });
+  }>(() => startOfLocalDayUtcRange(new Date()));
 
   // 1. Добавляем состояние категории
   const [category, setCategory] = useState("all");

@@ -3,6 +3,15 @@ import { ZodAppointment } from "../schemas/books/bookSchema";
 
 const supabase = createClient();
 
+export class BookingOverlapError extends Error {
+  code = "BOOKING_OVERLAP" as const;
+
+  constructor(message = "Выбранный слот уже занят") {
+    super(message);
+    this.name = "BookingOverlapError";
+  }
+}
+
 export const fetchAppointments = async ({
   from,
   to,
@@ -40,6 +49,10 @@ export const addAppointment = async (
     .single();
 
   if (error) {
+    if (error.code === "23P01" || error.code === "23505") {
+      throw new BookingOverlapError();
+    }
+
     throw new Error(error.message);
   }
 

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { ru } from "date-fns/locale";
-import { format, startOfDay, endOfDay } from "date-fns";
+import { format } from "date-fns";
 import { type DateRange } from "react-day-picker";
 
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
+import { startOfLocalDayUtcRange } from "@/src/lib/time";
 
 type Props = {
   onChange?: (fromISO: string | null, toISO: string | null) => void;
@@ -31,10 +32,11 @@ export default function FilterDate({ onChange }: Props) {
     if (!range?.from) {
       onChange(null, null);
     } else {
-      // Приводим к 00:00:00 и 23:59:59 именно локального дня
-      const from = startOfDay(range.from).toISOString();
-      const to = endOfDay(range.to || range.from).toISOString();
-      onChange(from, to);
+      const fromDate = range.from;
+      const toDate = range.to || range.from;
+      const fromRange = startOfLocalDayUtcRange(fromDate);
+      const toRange = startOfLocalDayUtcRange(toDate);
+      onChange(fromRange.from, toRange.to);
     }
     setOpen(false);
   };

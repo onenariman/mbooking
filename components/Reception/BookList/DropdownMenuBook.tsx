@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import dayjs from "dayjs";
 import { toast } from "sonner";
+import { isPastUtcIso } from "@/src/lib/time";
 import {
   CheckCircle2,
   XCircle,
@@ -54,9 +54,7 @@ export default function DropdownMenuBook({ book }: { book: ZodAppointment }) {
 
   const { mutateAsync: updateAppointment, isPending } = useUpdateAppointment();
 
-  const isPast = book.appointment_at
-    ? dayjs(book.appointment_at).isBefore(dayjs())
-    : false;
+  const isPast = book.appointment_at ? isPastUtcIso(book.appointment_at) : false;
   const phone = book.client_phone;
 
   // Универсальная функция смены статуса (кроме завершения)

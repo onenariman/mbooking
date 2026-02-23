@@ -116,7 +116,7 @@ const AddService = () => {
               if (formatted === "") {
                 setPrice(null);
               } else {
-                setPrice(Number(formatted));
+                setPrice(Number(formatted.replace(/\s/g, "")));
               }
             }}
           />

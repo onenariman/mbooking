@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import dayjs from "dayjs";
 import { toast } from "sonner";
 
 import { useClients } from "@/src/hooks/clients.hooks";
 import { useServices } from "@/src/hooks/services.hook";
 import { useCategories } from "@/src/hooks/categories.hooks";
 import { useAddAppointment } from "@/src/hooks/appointments.hooks";
+import { BookingOverlapError } from "@/src/api/receptions.api";
 
 import SearchClient from "./SearchClient";
 import SearchService from "./SearchService";
@@ -33,6 +33,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { formatPriceInput } from "@/src/validators/formatPriceInput";
+import { isPastUtcIso } from "@/src/lib/time";
 
 // ЯВНОЕ ОПРЕДЕЛЕНИЕ ТИПОВ (решает твою ошибку)
 interface FormState {
@@ -72,7 +73,7 @@ export default function AddBook() {
 
   const isTimeInvalid = useMemo(() => {
     if (!form.appointment_at) return false;
-    return dayjs(form.appointment_at).isBefore(dayjs().subtract(1, "minute"));
+    return isPastUtcIso(form.appointment_at);
   }, [form.appointment_at]);
 
   const handleSubmit = () => {
@@ -104,8 +105,14 @@ export default function AddBook() {
         setOpen(false);
         setForm(initialState);
       },
-      onError: (err) =>
-        toast.error(err instanceof Error ? err.message : "Ошибка"),
+      onError: (err) => {
+        if (err instanceof BookingOverlapError) {
+          toast.error("Этот слот уже занят. Выберите другое время");
+          return;
+        }
+
+        toast.error(err instanceof Error ? err.message : "Ошибка");
+      },
     });
   };
 

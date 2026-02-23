@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import dayjs from "dayjs";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 
@@ -15,7 +14,13 @@ import {
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Check } from "lucide-react"; // Добавил иконку для красоты
+import { Check } from "lucide-react";
+import {
+  formatUtcIsoTime,
+  fromUtcIso,
+  isPastUtcIso,
+  toUtcIso,
+} from "@/src/lib/time";
 
 interface DateBookProps {
   value: string | null;
@@ -23,16 +28,15 @@ interface DateBookProps {
 }
 
 export default function DateBook({ value, onChange }: DateBookProps) {
-  // Состояние для управления открытием поповера
   const [isOpened, setIsOpened] = useState(false);
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
-    value ? new Date(value) : new Date(),
+    value ? fromUtcIso(value) : new Date(),
   );
 
   const [time, setTime] = useState(() => {
-    if (value) return dayjs(value).format("HH:mm");
-    return dayjs().format("HH:mm");
+    if (value) return formatUtcIsoTime(value);
+    return format(new Date(), "HH:mm");
   });
 
   const onChangeRef = useRef(onChange);
@@ -42,21 +46,12 @@ export default function DateBook({ value, onChange }: DateBookProps) {
 
   const combinedISO = useMemo(() => {
     if (!selectedDate || !time) return null;
-    const [h, m] = time.split(":").map(Number);
-    const hours = Math.min(Math.max(isNaN(h) ? 0 : h, 0), 23);
-    const minutes = Math.min(Math.max(isNaN(m) ? 0 : m, 0), 59);
-
-    const result = dayjs(selectedDate)
-      .hour(hours)
-      .minute(minutes)
-      .second(0)
-      .millisecond(0);
-    return result.isValid() ? result.toISOString() : null;
+    return toUtcIso(selectedDate, time);
   }, [selectedDate, time]);
 
   const isPast = useMemo(() => {
     if (!combinedISO) return false;
-    return dayjs(combinedISO).isBefore(dayjs().subtract(1, "minute"));
+    return isPastUtcIso(combinedISO);
   }, [combinedISO]);
 
   useEffect(() => {

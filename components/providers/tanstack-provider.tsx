@@ -13,7 +13,7 @@ export const TanstackProvider = ({ children }: TanstackProviderProps) => {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: Infinity, // данные считаем вечными
+            staleTime: 1000 * 60, // 1 минута для более свежих данных CRM
             refetchOnWindowFocus: false, // фокус окна игнорируем
             retry: 0, // не повторяем запрос при ошибке
           },
