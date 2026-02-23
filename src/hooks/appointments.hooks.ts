@@ -17,6 +17,7 @@ type DateFilter = {
 };
 
 type AppointmentInput = Parameters<typeof addAppointment>[0];
+type AppointmentUpdateInput = Parameters<typeof updateAppointment>[1];
 
 // -------------------- ПОЛУЧЕНИЕ ЗАПИСЕЙ --------------------
 export const useAppointments = (filter?: DateFilter) => {
@@ -78,7 +79,7 @@ export const useUpdateAppointment = () => {
       updates,
     }: {
       id: string;
-      updates: Partial<ZodAppointment>;
+      updates: AppointmentUpdateInput;
     }) => updateAppointment(id, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });

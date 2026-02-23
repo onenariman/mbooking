@@ -97,16 +97,16 @@ export default function BookList({
   }
 
   return (
-    <Command className="rounded-xl border shadow-sm">
+    <Command>
       <CommandInput placeholder="Поиск по имени клиента..." />
-      <CommandList className="max-h-none p-2">
+      <CommandList className="border-none">
         <CommandEmpty>Ничего не найдено</CommandEmpty>
         <CommandGroup>
           {filtered.map((book: ZodAppointment) => (
             <CommandItem
               key={book.id}
               value={`${book.client_name} ${book.service_name}`}
-              className="border-b last:border-b-0 py-3 px-2 rounded-none first:rounded-t-md last:rounded-b-md"
+              className="backdrop-blur-md border-none rounded-xl p-4 shadow-md mt-2"
             >
               <ItemBook book={book} />
             </CommandItem>
