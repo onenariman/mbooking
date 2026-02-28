@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "crenspire-glass": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@shadcn/mcp-server",
+        "--registry",
+        "https://glass-ui.crenspire.com/r/registry.json"
+      ]
+    }
+  }
+}

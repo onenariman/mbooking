@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { ZodService } from "@/src/schemas/services/serviceSchema";
+import { cn } from "@/src/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -17,7 +18,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { cn } from "@/src/lib/utils";
 
 interface SearchServiceProps {
   services: ZodService[];
@@ -26,10 +26,12 @@ interface SearchServiceProps {
 
 const SearchService = ({ services, getService }: SearchServiceProps) => {
   const [open, setOpen] = useState(false);
-  const [selectedName, setSelectedName] = useState<string>("");
+  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
+
+  const selectedService = services.find((service) => service.id === selectedServiceId);
 
   return (
-    <Popover open={open} onOpenChange={setOpen} modal={true}>
+    <Popover open={open} onOpenChange={setOpen} modal>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -37,46 +39,41 @@ const SearchService = ({ services, getService }: SearchServiceProps) => {
           aria-expanded={open}
           className="w-full justify-between"
         >
-          {selectedName ? selectedName : "Выберите услугу..."}
+          {selectedService ? selectedService.name : "Выберите услугу..."}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
 
       <PopoverContent
-        className="w-[--radix-popover-trigger-width] p-0"
+        className="w-[--radix-popover-trigger-width] p-2"
         align="start"
-        side="bottom" // Всегда открывать снизу
-        sideOffset={4} // Небольшой отступ от кнопки
+        side="bottom"
+        sideOffset={4}
         avoidCollisions={false}
       >
         <Command>
           <CommandInput placeholder="Поиск услуги..." />
-          <CommandList>
+          <CommandList className="border-none">
             <CommandEmpty>Услуга не найдена.</CommandEmpty>
             <CommandGroup>
               {services.map((service) => (
                 <CommandItem
-                  key={service.id || service.name}
-                  value={service.name ?? ""}
-                  onSelect={(currentValue) => {
-                    // Если нажали на уже выбранное — снимаем выбор, иначе выбираем новое
-                    const newValue =
-                      currentValue === selectedName ? "" : currentValue;
-                    setSelectedName(newValue);
-
-                    if (service) getService(service);
-                    setOpen(false); // Закрываем выпадающий список
+                  className="mt-2"
+                  key={service.id}
+                  value={service.name}
+                  onSelect={() => {
+                    setSelectedServiceId(service.id);
+                    getService(service);
+                    setOpen(false);
                   }}
                 >
+                  {service.name}
                   <Check
                     className={cn(
-                      "mr-2 h-4 w-4",
-                      selectedName === service.name
-                        ? "opacity-100"
-                        : "opacity-0",
+                      "h-4 w-4",
+                      selectedServiceId === service.id ? "opacity-100" : "opacity-0",
                     )}
                   />
-                  {service.name}
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -88,3 +85,4 @@ const SearchService = ({ services, getService }: SearchServiceProps) => {
 };
 
 export default SearchService;
+

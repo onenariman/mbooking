@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
+import { ChartLine } from "lucide-react";
 import { useAppointments } from "@/src/hooks/appointments.hooks";
-import { startOfDay, endOfDay } from "date-fns";
+import { startOfLocalDayUtcRange } from "@/src/lib/time";
+import { Button } from "@/components/ui/button";
 import {
   Carousel,
   CarouselContent,
@@ -17,33 +19,25 @@ import {
   ItemDescription,
   ItemTitle,
 } from "@/components/ui/item";
-import { Button } from "@/components/ui/button";
-import { ChartLine } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const StatisticCard = () => {
-  // Получаем данные за сегодня (можно прокинуть даты из родителя, если нужно за весь период)
-  const today = useMemo(
-    () => ({
-      from: startOfDay(new Date()).toISOString(),
-      to: endOfDay(new Date()).toISOString(),
-    }),
-    [],
-  );
+  const todayRange = useMemo(() => startOfLocalDayUtcRange(new Date()), []);
+  const { data: appointments = [], isLoading } = useAppointments(todayRange);
 
-  const { data: appointments = [], isLoading } = useAppointments(today);
-
-  // Считаем суммы по категориям динамически
   const stats = useMemo(() => {
     const categoriesMap: Record<string, number> = {};
 
-    appointments.forEach((app) => {
-      // Считаем только завершенные записи, у которых есть сумма
-      if (app.status === "completed" && app.amount) {
-        const cat = app.category_name || "Без категории";
-        categoriesMap[cat] = (categoriesMap[cat] || 0) + app.amount;
+    for (const appointment of appointments) {
+      if (appointment.status !== "completed" || !appointment.amount) {
+        continue;
       }
-    });
+
+      const categoryName = appointment.category_name || "Без категории";
+      categoriesMap[categoryName] =
+        (categoriesMap[categoryName] || 0) + appointment.amount;
+    }
 
     return Object.entries(categoriesMap).map(([title, sum]) => ({
       title,
@@ -51,29 +45,29 @@ const StatisticCard = () => {
     }));
   }, [appointments]);
 
-  if (isLoading)
+  if (isLoading) {
     return (
-      <div className="flex justify-center p-4">
-        <Spinner />
-      </div>
+      <Button className="bg-transparent w-full">
+        <Skeleton className="h-8 w-full rounded-full bg-gray-200/80" />
+      </Button>
     );
+  }
 
-  // Если за сегодня еще нет завершенных записей
   if (stats.length === 0) {
     return (
-      <div className="p-4 text-center border rounded-xl text-muted-foreground text-sm">
-        Сегодня еще нет завершенных процедур
+      <div className="rounded-xl border p-4 text-center">
+        Сегодня ещё нет завершённых процедур
       </div>
     );
   }
 
   return (
     <div className="w-full">
-      <div className="flex flex-col mx-auto gap-y-5 items-center">
+      <div className="mx-auto flex flex-col items-center gap-y-5">
         <Carousel className="w-full">
           <CarouselContent>
-            {stats.map((item, index) => (
-              <CarouselItem key={index}>
+            {stats.map((item) => (
+              <CarouselItem key={item.title}>
                 <div className="p-1">
                   <Item variant="outline">
                     <ItemContent>

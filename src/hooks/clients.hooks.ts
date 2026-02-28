@@ -11,17 +11,26 @@ import {
   ZodClient,
 } from "../schemas/clients/clientSchema";
 
+const CLIENTS_QUERY_KEY = ["clients"] as const;
+
+type ClientCreateInput = Parameters<typeof addClient>[0];
+type ClientUpdateInput = Parameters<typeof updateClient>[1];
+
+interface UpdateClientPayload {
+  id: string;
+  updates: ClientUpdateInput;
+}
+
 export const useClients = () => {
   return useQuery({
-    queryKey: ["clients"],
+    queryKey: CLIENTS_QUERY_KEY,
     queryFn: async (): Promise<ZodClient[]> => {
       const rawData = await fetchClients();
-
       const result = ClientArraySchema.safeParse(rawData);
 
       if (!result.success) {
         console.error("Zod validation failed:", result.error.issues);
-        throw new Error("Данные не прошли валидацию");
+        throw new Error("Данные клиентов не прошли валидацию");
       }
 
       return result.data;
@@ -35,23 +44,21 @@ export const useAddClient = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (client: Partial<ZodClient>): Promise<ZodClient> => {
-      const result = clientSchema
-        .partial()
-        .pick({ name: true, phone: true })
-        .safeParse(client);
+    mutationFn: async (client: ClientCreateInput): Promise<ZodClient> => {
+      const result = clientSchema.pick({ name: true, phone: true }).safeParse(client);
 
       if (!result.success) {
-        const msg = result.error.issues.map((i) => i.message).join(", ");
-        throw new Error(msg);
+        const message = result.error.issues.map((issue) => issue.message).join(", ");
+        throw new Error(message);
       }
 
-      return addClient(client);
+      return addClient(result.data);
     },
     onSuccess: (newClient) => {
-      queryClient.setQueryData<ZodClient[]>(["clients"], (oldClients = []) => {
-        return [newClient, ...oldClients];
-      });
+      queryClient.setQueryData<ZodClient[]>(CLIENTS_QUERY_KEY, (oldClients = []) => [
+        newClient,
+        ...oldClients,
+      ]);
     },
   });
 };
@@ -60,45 +67,26 @@ export const useUpdateClient = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      id,
-      updates,
-    }: {
-      id: string;
-      updates: Partial<ZodClient>;
-    }) => updateClient(id, updates),
-
-    // 🔥 OPTIMISTIC UPDATE
+    mutationFn: ({ id, updates }: UpdateClientPayload) => updateClient(id, updates),
+    // Оптимистично обновляем список, чтобы интерфейс не "мигал".
     onMutate: async ({ id, updates }) => {
-      await queryClient.cancelQueries({
-        queryKey: ["clients"],
-      });
+      await queryClient.cancelQueries({ queryKey: CLIENTS_QUERY_KEY });
 
-      const previousClients = queryClient.getQueryData<ZodClient[]>([
-        "clients",
-      ]);
+      const previousClients = queryClient.getQueryData<ZodClient[]>(CLIENTS_QUERY_KEY);
 
-      queryClient.setQueryData<ZodClient[]>(["clients"], (old) =>
-        old?.map((client) =>
-          client.id === id ? { ...client, ...updates } : client,
-        ),
+      queryClient.setQueryData<ZodClient[]>(CLIENTS_QUERY_KEY, (old) =>
+        old?.map((client) => (client.id === id ? { ...client, ...updates } : client)),
       );
 
       return { previousClients };
     },
-
-    // 🔁 ROLLBACK
     onError: (_err, _vars, context) => {
       if (context?.previousClients) {
-        queryClient.setQueryData(["clients"], context.previousClients);
+        queryClient.setQueryData(CLIENTS_QUERY_KEY, context.previousClients);
       }
     },
-
-    // 🔄 SYNC WITH SERVER
     onSettled: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["clients"],
-      });
+      queryClient.invalidateQueries({ queryKey: CLIENTS_QUERY_KEY });
     },
   });
 };
@@ -108,35 +96,25 @@ export const useDeleteClient = () => {
 
   return useMutation({
     mutationFn: (id: string) => deleteClient(id),
-
-    // Оптимистичное удаление
     onMutate: async (id: string) => {
-      await queryClient.cancelQueries({ queryKey: ["clients"] });
+      await queryClient.cancelQueries({ queryKey: CLIENTS_QUERY_KEY });
 
-      const previousClients = queryClient.getQueryData<ZodClient[]>([
-        "clients",
-      ]);
+      const previousClients = queryClient.getQueryData<ZodClient[]>(CLIENTS_QUERY_KEY);
 
-      queryClient.setQueryData<ZodClient[]>(["clients"], (old) =>
-        old?.filter((c) => c.id !== id),
+      queryClient.setQueryData<ZodClient[]>(CLIENTS_QUERY_KEY, (old) =>
+        old?.filter((client) => client.id !== id),
       );
 
       return { previousClients };
     },
-
-    // Rollback, если ошибка
     onError: (_err, _id, context) => {
       if (context?.previousClients) {
-        queryClient.setQueryData<ZodClient[]>(
-          ["clients"],
-          context.previousClients,
-        );
+        queryClient.setQueryData<ZodClient[]>(CLIENTS_QUERY_KEY, context.previousClients);
       }
     },
-
-    // Синхронизация с сервером
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      queryClient.invalidateQueries({ queryKey: CLIENTS_QUERY_KEY });
     },
   });
 };
+

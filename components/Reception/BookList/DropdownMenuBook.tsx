@@ -2,64 +2,71 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { isPastUtcIso } from "@/src/lib/time";
 import {
   CheckCircle2,
-  XCircle,
-  UserX,
-  Trash2,
-  Phone,
-  MessageCircle,
   Clock,
   Edit2Icon,
   EllipsisVertical,
+  MessageCircle,
+  Phone,
+  Trash2,
+  UserX,
+  XCircle,
 } from "lucide-react";
-
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-
+import { isPastUtcIso } from "@/src/lib/time";
+import { formatPriceInput } from "@/src/validators/formatPriceInput";
+import { useUpdateAppointment } from "@/src/hooks/appointments.hooks";
 import {
   ZodAppointment,
   ZodAppointmentStatus,
 } from "@/src/schemas/books/bookSchema";
-import { useUpdateAppointment } from "@/src/hooks/appointments.hooks";
-import { formatPriceInput } from "@/src/validators/formatPriceInput";
-import { EditBook } from "./EditBook";
-import { DeleteBook } from "./DeleteBook";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
+import { DeleteBook } from "./DeleteBook";
+import { EditBook } from "./EditBook";
 
-export default function DropdownMenuBook({ book }: { book: ZodAppointment }) {
-  // Состояния для модальных окон
+interface DropdownMenuBookProps {
+  book: ZodAppointment;
+}
+
+export default function DropdownMenuBook({ book }: DropdownMenuBookProps) {
   const [showEdit, setShowEdit] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
-
-  // Состояние для ввода финальной суммы
   const [finalAmount, setFinalAmount] = useState(book.amount?.toString() || "");
 
   const { mutateAsync: updateAppointment, isPending } = useUpdateAppointment();
 
-  const isPast = book.appointment_at ? isPastUtcIso(book.appointment_at) : false;
+  const isPast = book.appointment_at
+    ? isPastUtcIso(book.appointment_at)
+    : false;
   const phone = book.client_phone;
+  const whatsappPhone = phone.replace(/\D/g, "");
 
-  // Универсальная функция смены статуса (кроме завершения)
+  const canComplete = isPast && book.status !== "completed";
+  const canSetNoShow = isPast && book.status !== "no_show";
+
   const handleChangeStatus = async (status: ZodAppointmentStatus) => {
-    if (status === book.status) return;
+    if (status === book.status) {
+      return;
+    }
+
     try {
       await updateAppointment({ id: book.id, updates: { status } });
       toast.success("Статус обновлён");
@@ -68,10 +75,16 @@ export default function DropdownMenuBook({ book }: { book: ZodAppointment }) {
     }
   };
 
-  // Специальная функция для завершения записи с вводом суммы
   const handleComplete = async () => {
+    const normalized = finalAmount.replace(/\s/g, "");
+    const numericAmount = Number(normalized);
+
+    if (!normalized || Number.isNaN(numericAmount)) {
+      toast.error("Введите корректную сумму");
+      return;
+    }
+
     try {
-      const numericAmount = Number(finalAmount.replace(/\s/g, ""));
       await updateAppointment({
         id: book.id,
         updates: {
@@ -79,6 +92,7 @@ export default function DropdownMenuBook({ book }: { book: ZodAppointment }) {
           amount: numericAmount,
         },
       });
+
       toast.success("Запись успешно завершена");
       setShowCompleteDialog(false);
     } catch {
@@ -90,16 +104,15 @@ export default function DropdownMenuBook({ book }: { book: ZodAppointment }) {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="p-2 rounded-md hover:bg-muted transition-colors outline-none">
-            <EllipsisVertical size={20} className="text-muted-foreground" />
-          </button>
+          <Button variant="outline" size="icon">
+            <EllipsisVertical size={20} className="text-foreground" />
+          </Button>
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="end" className="w-60">
-          {/* Статусы */}
           <DropdownMenuItem
             onClick={() => setShowCompleteDialog(true)}
-            disabled={isPending || book.status === "completed" || !isPast}
+            disabled={isPending || !canComplete}
           >
             <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
             Завершить...
@@ -115,7 +128,7 @@ export default function DropdownMenuBook({ book }: { book: ZodAppointment }) {
 
           <DropdownMenuItem
             onClick={() => handleChangeStatus("no_show")}
-            disabled={isPending || book.status === "no_show" || !isPast}
+            disabled={isPending || !canSetNoShow}
           >
             <UserX className="mr-2 h-4 w-4 text-red-500" />
             Не пришёл
@@ -123,48 +136,51 @@ export default function DropdownMenuBook({ book }: { book: ZodAppointment }) {
 
           <DropdownMenuSeparator />
 
-          {/* Контакты */}
           <DropdownMenuItem asChild>
             <a href={`tel:${phone}`}>
-              <Phone className="mr-2 h-4 w-4" /> Позвонить
+              <Phone className="h-4 w-4" />
+              Позвонить
             </a>
           </DropdownMenuItem>
-          <DropdownMenuItem asChild>
+
+          <DropdownMenuItem asChild disabled={!whatsappPhone}>
             <a
-              href={`https://wa.me/${phone.replace(/\D/g, "")}`}
+              href={`https://wa.me/${whatsappPhone}`}
               target="_blank"
               rel="noopener noreferrer"
             >
-              <MessageCircle className="mr-2 h-4 w-4 text-green-500" /> WhatsApp
+              <MessageCircle className="h-4 w-4 text-green-500" />
+              WhatsApp
             </a>
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />
 
-          {/* Действия */}
           <DropdownMenuItem onClick={() => setShowEdit(true)}>
-            <Edit2Icon className="mr-2 h-4 w-4 text-blue-500" /> Изменить
+            <Edit2Icon className="h-4 w-4 text-blue-500" />
+            Изменить
           </DropdownMenuItem>
 
           <DropdownMenuItem
             onClick={() => setShowDelete(true)}
-            className="text-red-500 focus:text-red-600 focus:bg-red-50"
+            className="text-red-500 focus:bg-red-50 focus:text-red-600"
           >
-            <Trash2 className="mr-2 h-4 w-4" /> Удалить
+            <Trash2 className="h-4 w-4" />
+            Удалить
           </DropdownMenuItem>
 
           {!isPast && (
             <>
               <DropdownMenuSeparator />
-              <div className="px-2 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground flex items-center font-bold">
-                <Clock className="mr-1.5 h-3 w-3" /> Будущая запись
+              <div className="flex items-center px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                <Clock className="mr-1.5 h-3 w-3" />
+                Будущая запись
               </div>
             </>
           )}
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Диалог ввода суммы при завершении */}
       <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
         <DialogContent className="max-w-[350px] rounded-2xl">
           <DialogHeader>
@@ -174,7 +190,7 @@ export default function DropdownMenuBook({ book }: { book: ZodAppointment }) {
             <div className="space-y-1.5">
               <Label
                 htmlFor="amount"
-                className="text-xs uppercase text-muted-foreground font-bold"
+                className="text-xs font-bold uppercase text-muted-foreground"
               >
                 Итоговая стоимость (₽)
               </Label>
@@ -183,8 +199,8 @@ export default function DropdownMenuBook({ book }: { book: ZodAppointment }) {
                 type="text"
                 inputMode="numeric"
                 value={finalAmount}
-                onChange={(e) =>
-                  setFinalAmount(formatPriceInput(e.target.value))
+                onChange={(event) =>
+                  setFinalAmount(formatPriceInput(event.target.value))
                 }
                 placeholder="0"
                 className="text-lg font-semibold"
@@ -203,7 +219,6 @@ export default function DropdownMenuBook({ book }: { book: ZodAppointment }) {
         </DialogContent>
       </Dialog>
 
-      {/* Шторка редактирования и Диалог удаления */}
       <EditBook book={book} open={showEdit} onOpenChange={setShowEdit} />
       <DeleteBook id={book.id} open={showDelete} onOpenChange={setShowDelete} />
     </>

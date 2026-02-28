@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -28,7 +27,7 @@ export const DeleteBook = ({ id, open, onOpenChange }: DeleteBookProps) => {
       await deleteAppointment(id);
       toast.success("Запись удалена");
       onOpenChange(false);
-    } catch (error) {
+    } catch {
       toast.error("Ошибка при удалении");
     }
   };
@@ -63,3 +62,4 @@ export const DeleteBook = ({ id, open, onOpenChange }: DeleteBookProps) => {
     </Dialog>
   );
 };
+

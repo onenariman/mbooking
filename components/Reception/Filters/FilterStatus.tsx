@@ -3,7 +3,6 @@
 import { Button } from "@/components/ui/button";
 import { ZodAppointmentStatus } from "@/src/schemas/books/bookSchema";
 
-// Определяем тип для фильтра (все статусы + вариант "all")
 type FilterStatusValue = ZodAppointmentStatus | "all";
 
 interface FilterStatusProps {
@@ -11,27 +10,27 @@ interface FilterStatusProps {
   onChange: (value: FilterStatusValue) => void;
 }
 
-export function FilterStatus({ value, onChange }: FilterStatusProps) {
-  const statuses: { label: string; value: FilterStatusValue }[] = [
-    { label: "Все", value: "all" },
-    { label: "Запланировано", value: "booked" },
-    { label: "Завершено", value: "completed" },
-    { label: "Отменено", value: "cancelled" },
-    { label: "Не пришел", value: "no_show" },
-  ];
+const STATUS_OPTIONS: Array<{ label: string; value: FilterStatusValue }> = [
+  { label: "Все", value: "all" },
+  { label: "Запланировано", value: "booked" },
+  { label: "Завершено", value: "completed" },
+  { label: "Отменено", value: "cancelled" },
+  { label: "Не пришёл", value: "no_show" },
+];
 
+export function FilterStatus({ value, onChange }: FilterStatusProps) {
   return (
-    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-      {statuses.map((s) => (
+    <div className="scrollbar-hide flex gap-2 overflow-x-auto pb-2">
+      {STATUS_OPTIONS.map((status) => (
         <Button
-          key={s.value}
+          key={status.value}
           type="button"
           size="sm"
-          variant={value === s.value ? "default" : "secondary"}
-          onClick={() => onChange(s.value)}
+          variant={value === status.value ? "default" : "secondary"}
+          onClick={() => onChange(status.value)}
           className="whitespace-nowrap rounded-full"
         >
-          {s.label}
+          {status.label}
         </Button>
       ))}
     </div>

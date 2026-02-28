@@ -6,7 +6,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
-import { EllipsisVertical } from "lucide-react";
+import { Edit2Icon, EllipsisVertical, Trash2 } from "lucide-react";
 import { ZodService } from "@/src/schemas/services/serviceSchema";
 import { EditService } from "./EditService";
 
@@ -30,10 +30,12 @@ export function DropdownMenuService({
 
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={() => setEditOpen(true)}>
+            <Edit2Icon className="h-4 w-4 text-blue-500" />
             Изменить
           </DropdownMenuItem>
 
           <DropdownMenuItem className="text-destructive" onClick={onDelete}>
+            <Trash2 className="h-4 w-4" />
             Удалить
           </DropdownMenuItem>
         </DropdownMenuContent>

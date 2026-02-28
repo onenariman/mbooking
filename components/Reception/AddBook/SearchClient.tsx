@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronsUpDown } from "lucide-react"; // Импортируйте иконки
+import { Check, ChevronsUpDown } from "lucide-react";
 import { ZodClient } from "@/src/schemas/clients/clientSchema";
+import { cn } from "@/src/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -17,77 +18,62 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { cn } from "@/src/lib/utils";
 
 interface SearchClientProps {
   clients: ZodClient[];
   getClient: (client: ZodClient) => void;
 }
 
-export default function SearchClient({
-  clients,
-  getClient,
-}: SearchClientProps) {
+export default function SearchClient({ clients, getClient }: SearchClientProps) {
   const [open, setOpen] = useState(false);
-  const [selectedName, setSelectedName] = useState<string>("");
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+
+  const selectedClient = clients.find((client) => client.id === selectedClientId);
 
   return (
-    <Popover open={open} onOpenChange={setOpen} modal={true}>
-      {/* 1. modal={true} критически важен внутри Drawer/Sheet, 
-         чтобы фокус не "улетал" и работал скролл.
-      */}
-
+    <Popover open={open} onOpenChange={setOpen} modal>
       <PopoverTrigger asChild>
-        {/* asChild предотвращает вложенность button в button */}
         <Button
           variant="outline"
           role="combobox"
           aria-expanded={open}
           className="w-full justify-between"
         >
-          {selectedName ? selectedName : "Выберите клиента..."}
+          {selectedClient ? selectedClient.name : "Выберите клиента..."}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
 
-      {/* Внутри Drawer на мобильных PopoverContent может вылезать за пределы.
-         className="w-[--radix-popover-trigger-width]" заставит его быть шириной с кнопку.
-      */}
       <PopoverContent
-        className="w-[--radix-popover-trigger-width] p-0"
+        className="w-[--radix-popover-trigger-width] p-2"
         align="start"
-        side="bottom" // Всегда открывать снизу
-        sideOffset={4} // Небольшой отступ от кнопки
+        side="bottom"
+        sideOffset={4}
         avoidCollisions={false}
       >
         <Command>
-          {/* Input теперь внутри контента, а не внутри кнопки-триггера */}
           <CommandInput placeholder="Поиск клиента..." />
-          <CommandList>
+          <CommandList className="border-none">
             <CommandEmpty>Клиент не найден.</CommandEmpty>
             <CommandGroup>
               {clients.map((client) => (
                 <CommandItem
-                  key={client.id || client.name} // Лучше использовать ID если есть
-                  value={client.name ?? ""}
-                  onSelect={(currentValue) => {
-                    // Логика выбора:
-                    setSelectedName(
-                      currentValue === selectedName ? "" : currentValue,
-                    );
-                    if (client) getClient(client);
-                    setOpen(false); // Закрываем после выбора
+                  className="mt-2"
+                  key={client.id}
+                  value={`${client.name} ${client.phone}`}
+                  onSelect={() => {
+                    setSelectedClientId(client.id);
+                    getClient(client);
+                    setOpen(false);
                   }}
                 >
+                  {client.name}
                   <Check
                     className={cn(
-                      "mr-2 h-4 w-4",
-                      selectedName === client.name
-                        ? "opacity-100"
-                        : "opacity-0",
+                      "h-4 w-4",
+                      selectedClientId === client.id ? "opacity-100" : "opacity-0",
                     )}
                   />
-                  {client.name}
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -97,3 +83,4 @@ export default function SearchClient({
     </Popover>
   );
 }
+

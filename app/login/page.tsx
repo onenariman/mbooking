@@ -1,14 +1,8 @@
 import { login } from "./action";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 
 export default function LoginPage() {
   return (
@@ -19,13 +13,12 @@ export default function LoginPage() {
           <CardDescription>Введите данные для доступа</CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Мы просто привязываем функцию к форме через action */}
           <form action={login} className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
-                name="email" // Важно: по этому имени action найдет данные
+                name="email"
                 type="email"
                 placeholder="name@example.com"
                 required
@@ -33,12 +26,7 @@ export default function LoginPage() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">Пароль</Label>
-              <Input
-                id="password"
-                name="password" // Важно
-                type="password"
-                required
-              />
+              <Input id="password" name="password" type="password" required />
             </div>
             <Button type="submit" className="w-full">
               Войти
@@ -49,3 +37,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

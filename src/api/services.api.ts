@@ -3,6 +3,11 @@ import { ZodService } from "../schemas/services/serviceSchema";
 
 const supabase = createClient();
 
+type ServiceCreateInput = Pick<ZodService, "name" | "category_id" | "price">;
+type ServiceUpdateInput = Partial<
+  Pick<ZodService, "name" | "category_id" | "price">
+>;
+
 export const fetchServices = async () => {
   const { error, data } = await supabase.from("services").select("*");
 
@@ -14,11 +19,11 @@ export const fetchServices = async () => {
 };
 
 export const addService = async (
-  service: Partial<ZodService>,
+  service: ServiceCreateInput,
 ): Promise<ZodService> => {
   const { data, error } = await supabase
     .from("services")
-    .insert([service])
+    .insert(service)
     .select()
     .single();
 
@@ -40,7 +45,7 @@ export const deleteService = async (id: string) => {
 
 export const updateService = async (
   id: string,
-  updates: Partial<ZodService>,
+  updates: ServiceUpdateInput,
 ) => {
   const { error } = await supabase
     .from("services")

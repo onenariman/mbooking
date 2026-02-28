@@ -3,22 +3,25 @@ import { ZodClient } from "../schemas/clients/clientSchema";
 
 const supabase = createClient();
 
-export const fetchClients = async () => {
+type ClientCreateInput = Pick<ZodClient, "name" | "phone">;
+type ClientUpdateInput = Partial<ClientCreateInput>;
+
+export const fetchClients = async (): Promise<ZodClient[]> => {
   const { data, error } = await supabase.from("clients").select("*");
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return data;
+  return data as ZodClient[];
 };
 
 export const addClient = async (
-  client: Partial<ZodClient>,
+  client: ClientCreateInput,
 ): Promise<ZodClient> => {
   const { data, error } = await supabase
     .from("clients")
-    .insert([client])
+    .insert(client)
     .select()
     .single();
 
@@ -32,12 +35,20 @@ export const addClient = async (
 export const deleteClient = async (id: string) => {
   const { data, error } = await supabase.from("clients").delete().eq("id", id);
 
-  if (error) throw error;
+  if (error) {
+    throw new Error(error.message);
+  }
+
   return data;
 };
 
-export const updateClient = async (id: string, updates: Partial<ZodClient>) => {
+export const updateClient = async (id: string, updates: ClientUpdateInput) => {
   const { error } = await supabase.from("clients").update(updates).eq("id", id);
-  if (error) throw error;
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
   return { id, updates };
 };
+

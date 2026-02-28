@@ -1,17 +1,20 @@
 "use client";
 
+import type { ComponentProps } from "react";
+import { format } from "date-fns";
+import { ru } from "date-fns/locale";
+import { Badge } from "@/components/ui/badge";
 import {
   ZodAppointment,
   ZodAppointmentStatus,
 } from "@/src/schemas/books/bookSchema";
-import { format } from "date-fns";
-import { ru } from "date-fns/locale";
 import DropdownMenuBook from "./DropdownMenuBook";
-import { Badge } from "@/components/ui/badge";
 
 interface ItemProps {
   book: ZodAppointment;
 }
+
+type BadgeVariant = ComponentProps<typeof Badge>["variant"];
 
 const statusLabels: Record<ZodAppointmentStatus, string> = {
   booked: "Запланировано",
@@ -20,46 +23,51 @@ const statusLabels: Record<ZodAppointmentStatus, string> = {
   no_show: "Не пришёл",
 };
 
+const statusToBadgeVariant: Record<ZodAppointmentStatus, BadgeVariant> = {
+  booked: "default",
+  completed: "secondary",
+  cancelled: "destructive",
+  no_show: "outline",
+};
+
 const ItemBook = ({ book }: ItemProps) => {
   return (
-    <div className="w-full flex justify-between items-center p-1">
-      <div className="flex flex-col gap-1">
-        {/* Имя и услуга */}
+    <div className="flex w-full items-center justify-between text-foreground p-2">
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex flex-col items-start">
-          <span className="font-semibold leading-none text-sm md:text-base">
-            {book.client_name}
-          </span>
-          <span className="text-xs md:text-sm text-muted-foreground">
-            {book.service_name}
-          </span>
+          <span>{book.client_name}</span>
+          <span className="text-muted-foreground">{book.service_name}</span>
         </div>
 
-        {/* Дата и время */}
-        <div className="flex items-center gap-x-1 text-[11px] md:text-xs text-green-600 font-medium">
-          {book.appointment_at && (
+        {book.appointment_at && (
+          <div className="flex items-center gap-x-1 text-sm text-muted-foreground">
             <span>
               {format(new Date(book.appointment_at), "dd MMMM HH:mm", {
                 locale: ru,
               })}
             </span>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* Статус и Цена */}
-        <div className="flex items-center gap-x-2 mt-1">
-          {/* Здесь variant={book.status} теперь работает идеально! */}
-          <Badge variant={book.status}>{statusLabels[book.status]}</Badge>
+        <div className="flex items-center gap-x-2">
+          <Badge variant={statusToBadgeVariant[book.status]}>
+            {statusLabels[book.status]}
+          </Badge>
 
           {book.amount !== null && (
-            <span className="text-sm font-bold text-foreground">
+            <Badge
+              className="text-sm"
+              variant={statusToBadgeVariant[book.status]}
+            >
               {book.amount.toLocaleString("ru-RU")} ₽
-            </span>
+            </Badge>
           )}
         </div>
       </div>
 
-      {/* Меню действий */}
-      <DropdownMenuBook book={book} />
+      <div className="ml-3 shrink-0">
+        <DropdownMenuBook book={book} />
+      </div>
     </div>
   );
 };

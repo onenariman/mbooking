@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useCategories } from "@/src/hooks/categories.hooks";
 
 interface FilterCategoryProps {
@@ -14,12 +14,9 @@ export function FilterCategory({ value, onChange }: FilterCategoryProps) {
 
   if (isLoading) {
     return (
-      <div className="flex gap-2 pb-2">
-        <Spinner className="h-4 w-4" />
-        <span className="text-xs text-muted-foreground">
-          Загрузка категорий...
-        </span>
-      </div>
+      <Button disabled className="bg-transparent w-full">
+        <Skeleton className="h-8 w-full rounded-full bg-gray-200/80" />
+      </Button>
     );
   }
 

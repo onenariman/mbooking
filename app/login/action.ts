@@ -1,7 +1,7 @@
 "use server";
 
-import { createClient } from "@/src/utils/supabase/server";
 import { redirect } from "next/navigation";
+import { createClient } from "@/src/utils/supabase/server";
 
 export async function login(formData: FormData) {
   const supabase = await createClient();
@@ -12,10 +12,9 @@ export async function login(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    // Если ошибка, можно прокинуть её в URL и показать пользователю
     redirect("/login?error=auth-failed");
   }
 
-  // Перенаправляем на главную после успеха
   redirect("/");
 }
+

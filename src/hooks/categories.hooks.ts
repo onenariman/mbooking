@@ -1,29 +1,36 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-
 import {
   fetchCategory,
   addCategory,
   deleteCategory,
   updateCategory,
 } from "../api/categories.api";
-
 import {
   categoryArraySchema,
-  ZodCategory,
   categorySchema,
+  ZodCategory,
 } from "../schemas/categories/categorySchema";
+
+const CATEGORIES_QUERY_KEY = ["categories"] as const;
+
+type CategoryCreateInput = Parameters<typeof addCategory>[0];
+type CategoryUpdateInput = Parameters<typeof updateCategory>[1];
+
+interface UpdateCategoryPayload {
+  id: string;
+  updates: CategoryUpdateInput;
+}
 
 export const useCategories = () => {
   return useQuery({
-    queryKey: ["categories"],
+    queryKey: CATEGORIES_QUERY_KEY,
     queryFn: async (): Promise<ZodCategory[]> => {
       const rawData = await fetchCategory();
-
       const result = categoryArraySchema.safeParse(rawData);
 
       if (!result.success) {
         console.error("Zod validation failed:", result.error.issues);
-        throw new Error("Данные не прошли валидацию");
+        throw new Error("Данные категорий не прошли валидацию");
       }
 
       return result.data;
@@ -37,28 +44,21 @@ export const useAddCategory = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (
-      category: Partial<ZodCategory>,
-    ): Promise<ZodCategory> => {
-      const result = categorySchema
-        .partial()
-        .pick({ category_name: true })
-        .safeParse(category);
+    mutationFn: async (category: CategoryCreateInput): Promise<ZodCategory> => {
+      const result = categorySchema.pick({ category_name: true }).safeParse(category);
 
       if (!result.success) {
-        const msg = result.error.issues.map((i) => i.message).join(", ");
-        throw new Error(msg);
+        const message = result.error.issues.map((issue) => issue.message).join(", ");
+        throw new Error(message);
       }
 
-      return addCategory(category);
+      return addCategory(result.data);
     },
     onSuccess: (newCategory) => {
-      queryClient.setQueryData<ZodCategory[]>(
-        ["categories"],
-        (oldCategory = []) => {
-          return [newCategory, ...oldCategory];
-        },
-      );
+      queryClient.setQueryData<ZodCategory[]>(CATEGORIES_QUERY_KEY, (oldCategory = []) => [
+        newCategory,
+        ...oldCategory,
+      ]);
     },
   });
 };
@@ -68,35 +68,28 @@ export const useDeleteCategory = () => {
 
   return useMutation({
     mutationFn: (id: string) => deleteCategory(id),
-
-    // Оптимистичное удаление
     onMutate: async (id: string) => {
-      await queryClient.cancelQueries({ queryKey: ["categories"] });
+      await queryClient.cancelQueries({ queryKey: CATEGORIES_QUERY_KEY });
 
-      const previousCategories = queryClient.getQueryData<ZodCategory[]>([
-        "categories",
-      ]);
+      const previousCategories =
+        queryClient.getQueryData<ZodCategory[]>(CATEGORIES_QUERY_KEY);
 
-      queryClient.setQueryData<ZodCategory[]>(["categories"], (old) =>
-        old?.filter((c) => c.id !== id),
+      queryClient.setQueryData<ZodCategory[]>(CATEGORIES_QUERY_KEY, (old) =>
+        old?.filter((category) => category.id !== id),
       );
 
       return { previousCategories };
     },
-
-    // Rollback, если ошибка
     onError: (_err, _id, context) => {
       if (context?.previousCategories) {
         queryClient.setQueryData<ZodCategory[]>(
-          ["categories"],
+          CATEGORIES_QUERY_KEY,
           context.previousCategories,
         );
       }
     },
-
-    // Синхронизация с сервером
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      queryClient.invalidateQueries({ queryKey: CATEGORIES_QUERY_KEY });
     },
   });
 };
@@ -105,25 +98,15 @@ export const useUpdateCategory = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      id,
-      updates,
-    }: {
-      id: string;
-      updates: Partial<ZodCategory>;
-    }) => updateCategory(id, updates),
-
-    // 🔥 OPTIMISTIC UPDATE
+    mutationFn: ({ id, updates }: UpdateCategoryPayload) => updateCategory(id, updates),
+    // Показываем изменения сразу, затем синхронизируем с сервером.
     onMutate: async ({ id, updates }) => {
-      await queryClient.cancelQueries({
-        queryKey: ["categories"],
-      });
+      await queryClient.cancelQueries({ queryKey: CATEGORIES_QUERY_KEY });
 
-      const previousCategories = queryClient.getQueryData<ZodCategory[]>([
-        "categories",
-      ]);
+      const previousCategories =
+        queryClient.getQueryData<ZodCategory[]>(CATEGORIES_QUERY_KEY);
 
-      queryClient.setQueryData<ZodCategory[]>(["categories"], (old) =>
+      queryClient.setQueryData<ZodCategory[]>(CATEGORIES_QUERY_KEY, (old) =>
         old?.map((category) =>
           category.id === id ? { ...category, ...updates } : category,
         ),
@@ -131,19 +114,14 @@ export const useUpdateCategory = () => {
 
       return { previousCategories };
     },
-
-    // 🔁 ROLLBACK
     onError: (_err, _vars, context) => {
       if (context?.previousCategories) {
-        queryClient.setQueryData(["categories"], context.previousCategories);
+        queryClient.setQueryData(CATEGORIES_QUERY_KEY, context.previousCategories);
       }
     },
-
-    // 🔄 SYNC WITH SERVER
     onSettled: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["categories"],
-      });
+      queryClient.invalidateQueries({ queryKey: CATEGORIES_QUERY_KEY });
     },
   });
 };
+

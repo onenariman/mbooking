@@ -62,16 +62,16 @@ export default function FilterDate({ onChange }: Props) {
           type="button"
           size="lg"
         >
-          <CalendarIcon className="mr-2 h-4 w-4" />
+          <CalendarIcon className="h-4 w-4" />
           {renderLabel()}
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent className="w-fit" align="center">
+      <PopoverContent className="w-fit" align="center" sideOffset={-114}>
         <div className="p-4 flex flex-col gap-4">
           <div className="space-y-1">
             <h4 className="font-medium">Выберите период</h4>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-white">
               Записи будут отфильтрованы по этому диапазону.
             </p>
           </div>
@@ -83,6 +83,7 @@ export default function FilterDate({ onChange }: Props) {
             onSelect={setRange}
             autoFocus
             className="rounded-md border shadow-sm mx-auto"
+            buttonVariant="link"
           />
 
           <div className="flex gap-2">

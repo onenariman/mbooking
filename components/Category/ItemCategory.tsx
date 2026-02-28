@@ -17,9 +17,8 @@ const ItemCategory = ({ category }: ItemProps) => {
   };
 
   return (
-    <div className="w-full flex items-center justify-between">
+    <div className="w-full flex items-center justify-between text-foreground p-2">
       <p className="text-xs font-semibold">{category.category_name}</p>
-
       <div className="flex items-center gap-x-2">
         <DropdownMenuCategory category={category} onDelete={handleDelete} />
       </div>

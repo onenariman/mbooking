@@ -11,23 +11,25 @@ import {
   CommandList,
   CommandEmpty,
 } from "@/components/ui/command";
+import { Skeleton } from "../ui/skeleton";
 
 const ListService = () => {
   const { data: services = [], isLoading, isError, error } = useServices();
-  if (isLoading) return <p>Загрузка услуг...</p>;
+  if (isLoading) return <Skeleton className="w-full bg-gray-400 h-12" />;
   if (isError) return <p>Ошибка: {error?.message}</p>;
   return (
     <>
-      <Command>
+      <Command className="bg-transparent">
         <CommandInput placeholder="Найти услугу" />
-        <CommandList className="mt-4">
+        <CommandList className="min-h-fit">
           <CommandEmpty>Услуги не найдены</CommandEmpty>
-          <CommandGroup className="h-fit">
+          <CommandGroup>
             {services.map((service) => (
               <CommandItem
                 key={service.id}
                 value={`${service.name ?? ""}`}
-                className="border my-3"
+                className="mt-3 w-full bg-background/70 rounded-4xl"
+                variant="outline"
               >
                 <ItemService service={service} />
               </CommandItem>

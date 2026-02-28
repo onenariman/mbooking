@@ -67,8 +67,6 @@ const AddClient = () => {
     );
   };
 
-  // const isFormInvalid = !name.trim() || clientPhone.length !== 10 || isPending;
-
   return (
     <Card>
       <CardHeader className="flex flex-col gap-y-1">

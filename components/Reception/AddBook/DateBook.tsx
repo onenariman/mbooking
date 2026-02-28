@@ -7,11 +7,13 @@ import { ru } from "date-fns/locale";
 import { cn } from "@/src/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Check } from "lucide-react";
@@ -78,7 +80,7 @@ export default function DateBook({ value, onChange }: DateBookProps) {
               : "Выбрать дату и время"}
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="start">
+        <PopoverContent align="start" className="bg-white/95">
           <Calendar
             mode="single"
             selected={selectedDate}
@@ -87,7 +89,8 @@ export default function DateBook({ value, onChange }: DateBookProps) {
             autoFocus
             locale={ru}
             disabled={{ before: new Date() }}
-            className="rounded-md border-none"
+            className="rounded-md border shadow-sm mx-auto"
+            buttonVariant="link"
           />
 
           <div className="flex items-center gap-2 mt-2 pt-2 border-t">
@@ -97,7 +100,7 @@ export default function DateBook({ value, onChange }: DateBookProps) {
               onKeyDown={(e) => e.preventDefault()}
               onChange={(e) => setTime(e.target.value)}
               className={cn(
-                "cursor-pointer",
+                "cursor-pointer text-black",
                 isPast &&
                   "border-destructive text-destructive focus-visible:ring-destructive",
               )}

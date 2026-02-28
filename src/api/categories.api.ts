@@ -3,6 +3,9 @@ import { ZodCategory } from "../schemas/categories/categorySchema";
 
 const supabase = createClient();
 
+type CategoryCreateInput = Pick<ZodCategory, "category_name">;
+type CategoryUpdateInput = Partial<Pick<ZodCategory, "category_name">>;
+
 export const fetchCategory = async () => {
   const { data, error } = await supabase.from("categories").select("*");
 
@@ -14,11 +17,11 @@ export const fetchCategory = async () => {
 };
 
 export const addCategory = async (
-  category: Partial<ZodCategory>,
+  category: CategoryCreateInput,
 ): Promise<ZodCategory> => {
   const { data, error } = await supabase
     .from("categories")
-    .insert([category])
+    .insert(category)
     .select()
     .single();
 
@@ -43,7 +46,7 @@ export const deleteCategory = async (id: string) => {
 
 export const updateCategory = async (
   id: string,
-  updates: Partial<ZodCategory>,
+  updates: CategoryUpdateInput,
 ) => {
   const { error } = await supabase
     .from("categories")

@@ -2,14 +2,6 @@
 
 import Client from "@/components/Client";
 
-// import dynamic from "next/dynamic";
-
-// const AddClient = dynamic(() => import("@/components/Client/AddClient"), {
-//   ssr: false,
-// });
-
-// const List = dynamic(() => import("@/components/Client/List"), { ssr: false });
-
 export default function ClientPage() {
   return (
     <div className="flex flex-col gap-y-5 py-4 min-h-screen">

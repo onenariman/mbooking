@@ -1,20 +1,19 @@
-"use client";
+﻿"use client";
 
-import { AlertCircle, RefreshCcw } from "lucide-react"; // Иконки для красоты
+import { useMemo } from "react";
+import { AlertCircle, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Command,
+  CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
-  CommandEmpty,
 } from "@/components/ui/command";
-
-import ItemBook from "./ItemBook";
-import { useAppointments } from "@/src/hooks/appointments.hooks";
-import { ZodAppointment } from "@/src/schemas/books/bookSchema";
 import { Spinner } from "@/components/ui/spinner";
+import { useAppointments } from "@/src/hooks/appointments.hooks";
+import ItemBook from "./ItemBook";
 
 interface BookListProps {
   from: string | null;
@@ -34,23 +33,32 @@ export default function BookList({
     isLoading,
     isError,
     error,
-    refetch, // Достаем функцию перезапроса
+    refetch,
   } = useAppointments({ from, to });
 
-  // 1. Обработка загрузки (Skeleton или Spinner)
+  const filteredAppointments = useMemo(() => {
+    return appointments.filter((book) => {
+      const matchesCategory =
+        selectedCategory === "all" || book.category_name === selectedCategory;
+      const matchesStatus =
+        selectedStatus === "all" || book.status === selectedStatus;
+
+      return matchesCategory && matchesStatus;
+    });
+  }, [appointments, selectedCategory, selectedStatus]);
+
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-10 gap-2">
+      <div className="flex flex-col items-center justify-center gap-2 py-10">
         <Spinner />
         <p className="text-sm text-muted-foreground">Загрузка записей...</p>
       </div>
     );
   }
 
-  // 2. Улучшенная обработка ошибки
   if (isError) {
     return (
-      <div className="flex flex-col items-center justify-center py-10 px-4 border-2 border-dashed border-destructive/20 rounded-xl bg-destructive/5 gap-3">
+      <div className="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-destructive/20 bg-destructive/5 px-4 py-10">
         <AlertCircle className="h-8 w-8 text-destructive" />
         <div className="text-center">
           <p className="font-semibold text-destructive">
@@ -75,18 +83,9 @@ export default function BookList({
     );
   }
 
-  const filtered = appointments.filter((book) => {
-    const matchCategory =
-      selectedCategory === "all" || book.category_name === selectedCategory;
-    const matchStatus =
-      selectedStatus === "all" || book.status === selectedStatus;
-    return matchCategory && matchStatus;
-  });
-
-  // 3. Состояние "Пусто" (дифференцируем: вообще нет данных или всё скрыто фильтрами)
-  if (filtered.length === 0) {
+  if (filteredAppointments.length === 0) {
     return (
-      <div className="text-center py-10 border border-dashed rounded-xl">
+      <div className="rounded-xl border border-dashed py-10 text-center">
         <p className="text-sm text-muted-foreground">
           {appointments.length > 0
             ? "Нет записей, соответствующих фильтрам"
@@ -97,16 +96,20 @@ export default function BookList({
   }
 
   return (
-    <Command>
-      <CommandInput placeholder="Поиск по имени клиента..." />
-      <CommandList className="border-none">
+    <Command className="bg-transparent">
+      <CommandInput
+        className="text-base md:text-sm"
+        placeholder="Поиск по имени клиента..."
+      />
+      <CommandList className="min-h-fit">
         <CommandEmpty>Ничего не найдено</CommandEmpty>
         <CommandGroup>
-          {filtered.map((book: ZodAppointment) => (
+          {filteredAppointments.map((book) => (
             <CommandItem
+              className="mt-3 w-full bg-background/70 rounded-4xl"
               key={book.id}
               value={`${book.client_name} ${book.service_name}`}
-              className="backdrop-blur-md border-none rounded-xl p-4 shadow-md mt-2"
+              variant="outline"
             >
               <ItemBook book={book} />
             </CommandItem>

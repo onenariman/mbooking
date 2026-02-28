@@ -1,9 +1,9 @@
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  fetchAppointments,
   addAppointment,
-  updateAppointment,
   deleteAppointment,
+  fetchAppointments,
+  updateAppointment,
 } from "../api/receptions.api";
 import {
   AppointmentArraySchema,
@@ -11,18 +11,24 @@ import {
   ZodAppointment,
 } from "../schemas/books/bookSchema";
 
+const APPOINTMENTS_QUERY_KEY = ["appointments"] as const;
+
+type AppointmentInput = Parameters<typeof addAppointment>[0];
+type AppointmentUpdateInput = Parameters<typeof updateAppointment>[1];
+
+interface UpdateAppointmentPayload {
+  id: string;
+  updates: AppointmentUpdateInput;
+}
+
 type DateFilter = {
   from?: string | null;
   to?: string | null;
 };
 
-type AppointmentInput = Parameters<typeof addAppointment>[0];
-type AppointmentUpdateInput = Parameters<typeof updateAppointment>[1];
-
-// -------------------- ПОЛУЧЕНИЕ ЗАПИСЕЙ --------------------
 export const useAppointments = (filter?: DateFilter) => {
   return useQuery({
-    queryKey: ["appointments", filter?.from, filter?.to],
+    queryKey: [...APPOINTMENTS_QUERY_KEY, filter?.from, filter?.to],
     queryFn: async (): Promise<ZodAppointment[]> => {
       const rawData = await fetchAppointments({
         from: filter?.from ?? null,
@@ -42,59 +48,47 @@ export const useAppointments = (filter?: DateFilter) => {
   });
 };
 
-// -------------------- ДОБАВЛЕНИЕ ЗАПИСИ --------------------
 export const useAddAppointment = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (
-      appointment: AppointmentInput,
-    ): Promise<ZodAppointment> => {
-      // Валидация перед отправкой
+    mutationFn: async (appointment: AppointmentInput): Promise<ZodAppointment> => {
       const result = createAppointmentSchema.safeParse(appointment);
       if (!result.success) {
-        const msg = result.error.issues.map((i) => i.message).join(", ");
-        throw new Error(msg);
+        const message = result.error.issues.map((issue) => issue.message).join(", ");
+        throw new Error(message);
       }
-      return addAppointment(appointment);
+
+      return addAppointment(result.data);
     },
-    // Ключевое изменение здесь:
     onSuccess: () => {
-      // Инвалидируем все запросы, которые начинаются с "appointments"
-      // Это заставит BookList мгновенно обновиться актуальными данными из БД
       queryClient.invalidateQueries({
-        queryKey: ["appointments"],
+        queryKey: APPOINTMENTS_QUERY_KEY,
       });
     },
   });
 };
 
-// -------------------- ОБНОВЛЕНИЕ ЗАПИСИ --------------------
 export const useUpdateAppointment = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      id,
-      updates,
-    }: {
-      id: string;
-      updates: AppointmentUpdateInput;
-    }) => updateAppointment(id, updates),
+    mutationFn: ({ id, updates }: UpdateAppointmentPayload) =>
+      updateAppointment(id, updates),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      queryClient.invalidateQueries({ queryKey: APPOINTMENTS_QUERY_KEY });
     },
   });
 };
 
-// -------------------- УДАЛЕНИЕ ЗАПИСИ --------------------
 export const useDeleteAppointment = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (id: string) => deleteAppointment(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      queryClient.invalidateQueries({ queryKey: APPOINTMENTS_QUERY_KEY });
     },
   });
 };
+
