@@ -78,22 +78,22 @@ const NavbarMenu = () => {
             <DropdownMenuItem asChild>
               <Link href="/receptions">Ресепшен</Link>
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
 
+            <DropdownMenuItem asChild>
+              <Link href="/charts">Статистика</Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link href="/categories">Категории</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="/services">Услуги</Link>
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
-
             <DropdownMenuItem asChild>
               <Link href="/clients">Клиенты</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
           </DropdownMenuGroup>
-
           <DropdownMenuGroup>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>Уход</DropdownMenuSubTrigger>
@@ -105,7 +105,6 @@ const NavbarMenu = () => {
               </DropdownMenuPortal>
             </DropdownMenuSub>
           </DropdownMenuGroup>
-
           <DropdownMenuSeparator />
           <DropdownMenuItem>Выйти</DropdownMenuItem>
         </DropdownMenuContent>
