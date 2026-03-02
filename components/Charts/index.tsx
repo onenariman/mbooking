@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import type { DateRange } from "react-day-picker";
@@ -28,7 +28,6 @@ import {
 import { getDefaultRange } from "./lib/constants";
 import MetricsCards from "./metrics/MetricsCards";
 import CategoriesSummary from "./summary/CategoriesSummary";
-import RecommendationsCard from "./summary/RecommendationsCard";
 import RevenueLossCard from "./summary/RevenueLossCard";
 import StatusSummary from "./summary/StatusSummary";
 
@@ -168,7 +167,7 @@ export default function ChartsSection() {
       <MetricsCards
         title={
           activeCategory === "all"
-            ? "Статистика выбранной категории"
+            ? "Статистика по всем категориям"
             : `Статистика категории: ${activeCategory}`
         }
         subtitle={

@@ -25,8 +25,8 @@ const statusLabels: Record<ZodAppointmentStatus, string> = {
 
 const statusToBadgeVariant: Record<ZodAppointmentStatus, BadgeVariant> = {
   booked: "default",
-  completed: "secondary",
-  cancelled: "destructive",
+  completed: "destructive",
+  cancelled: "secondary",
   no_show: "outline",
 };
 
@@ -38,7 +38,6 @@ const ItemBook = ({ book }: ItemProps) => {
           <span>{book.client_name}</span>
           <span className="text-muted-foreground">{book.service_name}</span>
         </div>
-
         {book.appointment_at && (
           <div className="flex items-center gap-x-1 text-sm text-muted-foreground">
             <span>
@@ -48,7 +47,7 @@ const ItemBook = ({ book }: ItemProps) => {
             </span>
           </div>
         )}
-
+        ё
         <div className="flex items-center gap-x-2">
           <Badge variant={statusToBadgeVariant[book.status]}>
             {statusLabels[book.status]}
