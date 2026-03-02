@@ -47,7 +47,6 @@ const ItemBook = ({ book }: ItemProps) => {
             </span>
           </div>
         )}
-        ё
         <div className="flex items-center gap-x-2">
           <Badge variant={statusToBadgeVariant[book.status]}>
             {statusLabels[book.status]}

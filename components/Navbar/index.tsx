@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Check, Menu, MonitorCog, Moon, Sun, SunMoon } from "lucide-react";
 import { cn } from "@/src/lib/utils";
+import { createClient } from "@/src/utils/supabase/client";
 import { Button } from "../ui/button";
 import {
   DropdownMenu,
@@ -26,6 +28,20 @@ const themeOptions = [
 
 const NavbarMenu = () => {
   const { theme, setTheme } = useTheme();
+  const router = useRouter();
+  const supabase = createClient();
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      console.error("Failed to sign out:", error.message);
+      return;
+    }
+
+    router.replace("/login");
+    router.refresh();
+  };
 
   return (
     <div className="flex items-center gap-2">
@@ -106,7 +122,15 @@ const NavbarMenu = () => {
             </DropdownMenuSub>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>Выйти</DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={(event) => {
+              event.preventDefault();
+              void handleLogout();
+            }}
+            className="text-red-700"
+          >
+            Выйти
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
