@@ -203,35 +203,45 @@ const normalizeSummary = (rawResponse: string): string => {
       .map((item, idx) => {
         const action = item.action || "Недостаточно данных";
         const kpi = item.kpi || "Недостаточно данных";
-        const owner = item.owner || "Недостаточно данных";
-        const impact = item.impact || "medium";
-        const effort = item.effort || "medium";
+        const owner = ownerRu(item.owner);
+        const impact = levelRu(item.impact);
+        const effort = levelRu(item.effort);
         const deadline =
           "deadline" in item && item.deadline !== undefined
             ? item.deadline
             : "deadline_day" in item
               ? (item.deadline_day ?? "Недостаточно данных")
               : "Недостаточно данных";
-        return `${idx + 1}. ${action} (owner: ${owner}, impact: ${impact}, effort: ${effort}, KPI: ${kpi}, deadline: ${deadline})`;
+        return `${idx + 1}. ${action}\n   Ответственный: ${owner}\n   Влияние: ${impact}\n   Сложность: ${effort}\n   KPI: ${kpi}\n   Срок: ${deadline}`;
       });
     const issuesText = issues.map((item, idx) => {
       const issue = item.issue || "Недостаточно данных";
       const rootCause = item.root_cause || "Недостаточно данных";
-      const retentionImpact = item.retention_impact || "medium";
-      return `${idx + 1}. ${issue} (причина: ${rootCause}; влияние на retention: ${retentionImpact})`;
+      const retentionImpact = levelRu(item.retention_impact);
+      return `${idx + 1}. ${issue}\n   Вероятная причина: ${rootCause}\n   Влияние на возврат клиента: ${retentionImpact}`;
     });
 
     return [
-      `Сводка: ${summary}`,
+      `Сводка\n${summary}`,
       "",
-      `Сильные стороны: ${strengths.length ? strengths.join("; ") : "Недостаточно данных"}`,
-      `Зоны роста: ${issuesText.length ? issuesText.join(" ") : "Недостаточно данных"}`,
+      "Сильные стороны",
+      strengths.length
+        ? strengths.map((item, idx) => `${idx + 1}. ${item}`).join("\n")
+        : "Недостаточно данных",
       "",
-      `План действий: ${actions.length ? actions.join(" ") : "Недостаточно данных"}`,
-      `Быстрая победа: ${parsed.quick_win || "Недостаточно данных"}`,
-      `Скрипт напоминания: ${parsed.scripts?.reminder_message || "Недостаточно данных"}`,
-      `Скрипт при задержке: ${parsed.scripts?.late_message || "Недостаточно данных"}`,
-      `Приоритет: ${parsed.priority || "medium"}`,
+      "Зоны роста",
+      issuesText.length ? issuesText.join("\n") : "Недостаточно данных",
+      "",
+      "План действий",
+      actions.length ? actions.join("\n") : "Недостаточно данных",
+      "",
+      `Быстрая победа\n${parsed.quick_win || "Недостаточно данных"}`,
+      "",
+      `Скрипт напоминания\n${parsed.scripts?.reminder_message || "Недостаточно данных"}`,
+      "",
+      `Скрипт при задержке\n${parsed.scripts?.late_message || "Недостаточно данных"}`,
+      "",
+      `Приоритет: ${levelRu(parsed.priority)}`,
     ].join("\n");
   } catch {
     return cleaned;
@@ -487,3 +497,16 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+    const levelRu = (value?: string) => {
+      if (value === "high") return "высокий";
+      if (value === "medium") return "средний";
+      if (value === "low") return "низкий";
+      return value || "Недостаточно данных";
+    };
+
+    const ownerRu = (value?: string) => {
+      if (value === "admin") return "администратор";
+      if (value === "master") return "мастер";
+      if (value === "owner") return "владелец";
+      return value || "Недостаточно данных";
+    };
