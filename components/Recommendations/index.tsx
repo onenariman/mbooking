@@ -67,6 +67,12 @@ export default function RecommendationsSection() {
     }
   };
 
+  const handlePeriodChange = (value: string) => {
+    if (periodOptions.some((option) => option.value === value)) {
+      setPeriod(value as ZodRecommendationPeriod);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-4 pb-8">
       <Card>
@@ -87,7 +93,7 @@ export default function RecommendationsSection() {
             <span className="text-sm text-muted-foreground">
               Период анализа:
             </span>
-            <Tabs value={period} onValueChange={setPeriod}>
+            <Tabs value={period} onValueChange={handlePeriodChange}>
               <TabsList className="flex flex-wrap gap-2 h-auto bg-transparent p-0">
                 {periodOptions.map((option) => (
                   <TabsTrigger
