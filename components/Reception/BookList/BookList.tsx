@@ -101,7 +101,7 @@ export default function BookList({
         className="text-base md:text-sm"
         placeholder="Поиск по имени клиента..."
       />
-      <CommandList className="min-h-fit">
+      <CommandList>
         <CommandEmpty>Ничего не найдено</CommandEmpty>
         <CommandGroup>
           {filteredAppointments.map((book) => (

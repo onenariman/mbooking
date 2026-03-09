@@ -94,7 +94,7 @@ function CommandList({
     <CommandPrimitive.List
       data-slot="command-list"
       className={cn(
-        "no-scrollbar max-h-72 scroll-py-1 outline-none overflow-x-hidden overflow-y-auto",
+        "no-scrollbar max-h-fit scroll-py-1 outline-none overflow-x-hidden overflow-y-auto",
         className,
       )}
       {...props}
@@ -159,8 +159,7 @@ const commandItemVariants = cva(
           "bg-transparent hover:bg-muted/60 data-[selected=true]:bg-muted data-[selected=true]:text-foreground",
         destructive:
           "bg-destructive/10 text-destructive hover:bg-destructive/15 data-[selected=true]:bg-destructive/20 data-[selected=true]:text-destructive",
-        link:
-          "text-primary underline-offset-4 hover:bg-primary/10 hover:underline data-[selected=true]:bg-primary/15",
+        link: "text-primary underline-offset-4 hover:bg-primary/10 hover:underline data-[selected=true]:bg-primary/15",
         glass:
           "border border-white/20 bg-white/10 backdrop-blur-md hover:bg-white/14 data-[selected=true]:border-white/30 data-[selected=true]:bg-white/18 supports-[backdrop-filter]:bg-white/10",
         glassStrong:
