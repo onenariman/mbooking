@@ -100,6 +100,20 @@ export const fetchRecommendations = async (
   return (data ?? []) as ZodAiRecommendation[];
 };
 
+export const deleteRecommendation = async (recommendationId: string): Promise<void> => {
+  const userId = await getCurrentUserId();
+
+  const { error } = await supabase
+    .from("ai_recommendations")
+    .delete()
+    .eq("id", recommendationId)
+    .eq("user_id", userId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+};
+
 class InsufficientFeedbackError extends Error {
   code = "INSUFFICIENT_FEEDBACK" as const;
 

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
-import { CalendarClock, Sparkles } from "lucide-react";
+import { CalendarClock, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Accordion,
@@ -24,6 +24,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InsufficientFeedbackError } from "@/src/api/feedback.api";
 import {
+  useDeleteRecommendation,
   useGenerateRecommendations,
   useRecommendations,
 } from "@/src/hooks/feedback.hooks";
@@ -48,6 +49,8 @@ export default function RecommendationsSection() {
   const { data: recommendations = [], isLoading } = useRecommendations(period);
   const { mutateAsync: generateRecommendation, isPending } =
     useGenerateRecommendations();
+  const { mutateAsync: deleteRecommendation, isPending: isDeleting } =
+    useDeleteRecommendation();
 
   const periodLabel = useMemo(
     () => periodOptions.find((option) => option.value === period)?.label ?? period,
@@ -70,6 +73,20 @@ export default function RecommendationsSection() {
   const handlePeriodChange = (value: string) => {
     if (periodOptions.some((option) => option.value === value)) {
       setPeriod(value as ZodRecommendationPeriod);
+    }
+  };
+
+  const handleDelete = async (recommendationId: string) => {
+    const confirmed = window.confirm("Удалить эту рекомендацию?");
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteRecommendation(recommendationId);
+      toast.success("Рекомендация удалена");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Ошибка удаления");
     }
   };
 
@@ -142,6 +159,18 @@ export default function RecommendationsSection() {
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="space-y-3">
+                    <div className="flex justify-end">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => void handleDelete(item.id)}
+                        disabled={isDeleting}
+                      >
+                        <Trash2 className="mr-1 h-4 w-4" />
+                        Удалить
+                      </Button>
+                    </div>
                     <p className="text-sm text-foreground">{item.summary}</p>
                     <div className="rounded-xl bg-muted/40 p-3 text-sm">
                       <div className="mb-2 text-xs font-semibold uppercase text-muted-foreground">

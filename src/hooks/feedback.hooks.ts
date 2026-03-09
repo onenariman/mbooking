@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createFeedbackToken,
+  deleteRecommendation,
   fetchRecommendations,
   generateRecommendations,
   submitFeedback,
@@ -57,6 +58,19 @@ export const useGenerateRecommendations = () => {
     onSuccess: (_data, period) => {
       queryClient.invalidateQueries({
         queryKey: [...RECOMMENDATIONS_QUERY_KEY, period],
+      });
+    },
+  });
+};
+
+export const useDeleteRecommendation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (recommendationId: string) => deleteRecommendation(recommendationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: RECOMMENDATIONS_QUERY_KEY,
       });
     },
   });
