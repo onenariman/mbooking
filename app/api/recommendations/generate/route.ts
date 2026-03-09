@@ -1,4 +1,4 @@
-﻿import { subDays, subMonths } from "date-fns";
+﻿import { addDays, format as formatDate, subDays, subMonths } from "date-fns";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/src/utils/supabase/server";
@@ -118,7 +118,7 @@ const buildPrompt = (params: {
     '      "impact": "high|medium|low",',
     '      "effort": "high|medium|low",',
     '      "kpi": "измеримый результат на горизонт плана",',
-    '      "deadline": "YYYY-MM-DD или D+N"',
+    '      "deadline": "YYYY-MM-DD (например 2026-03-20)"',
     "    }",
     "  ],",
     '  "quick_win": "заметное для клиента улучшение, реализуемое за 24 часа",',
@@ -153,6 +153,41 @@ const buildPrompt = (params: {
     "Отзывы:",
     numberedReviews,
   ].join("\n");
+};
+
+const levelRu = (value?: string) => {
+  if (value === "high") return "высокий";
+  if (value === "medium") return "средний";
+  if (value === "low") return "низкий";
+  return value || "Недостаточно данных";
+};
+
+const ownerRu = (value?: string) => {
+  if (value === "admin") return "администратор";
+  if (value === "master") return "мастер";
+  if (value === "owner") return "владелец";
+  return value || "Недостаточно данных";
+};
+
+const formatDeadlineRu = (value: string): string => {
+  const normalized = value.trim();
+  const relativeMatch = normalized.match(/^D\+(\d{1,2})$/i);
+  if (relativeMatch) {
+    const days = Number(relativeMatch[1]);
+    if (Number.isFinite(days)) {
+      const date = addDays(new Date(), days);
+      return `через ${days} дн. (${formatDate(date, "dd.MM.yyyy")})`;
+    }
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+    const date = new Date(`${normalized}T00:00:00`);
+    if (!Number.isNaN(date.getTime())) {
+      return formatDate(date, "dd.MM.yyyy");
+    }
+  }
+
+  return normalized || "Недостаточно данных";
 };
 
 const normalizeSummary = (rawResponse: string): string => {
@@ -212,7 +247,7 @@ const normalizeSummary = (rawResponse: string): string => {
             : "deadline_day" in item
               ? (item.deadline_day ?? "Недостаточно данных")
               : "Недостаточно данных";
-        return `${idx + 1}. ${action}\n   Ответственный: ${owner}\n   Влияние: ${impact}\n   Сложность: ${effort}\n   KPI: ${kpi}\n   Срок: ${deadline}`;
+        return `${idx + 1}. ${action}\n   Ответственный: ${owner}\n   Влияние: ${impact}\n   Сложность: ${effort}\n   KPI: ${kpi}\n   Срок: ${formatDeadlineRu(String(deadline))}`;
       });
     const issuesText = issues.map((item, idx) => {
       const issue = item.issue || "Недостаточно данных";
@@ -497,16 +532,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-    const levelRu = (value?: string) => {
-      if (value === "high") return "высокий";
-      if (value === "medium") return "средний";
-      if (value === "low") return "низкий";
-      return value || "Недостаточно данных";
-    };
 
-    const ownerRu = (value?: string) => {
-      if (value === "admin") return "администратор";
-      if (value === "master") return "мастер";
-      if (value === "owner") return "владелец";
-      return value || "Недостаточно данных";
-    };

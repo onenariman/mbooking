@@ -90,6 +90,41 @@ export default function RecommendationsSection() {
     }
   };
 
+  const renderSummary = (summary: string) => {
+    const sectionTitles = new Set([
+      "Сводка",
+      "Сильные стороны",
+      "Зоны роста",
+      "План действий",
+      "Быстрая победа",
+      "Скрипт напоминания",
+      "Скрипт при задержке",
+    ]);
+
+    return summary.split("\n").map((line, idx) => {
+      const trimmedLine = line.trim();
+      if (!trimmedLine) {
+        return <div key={`${idx}-spacer`} className="h-2" />;
+      }
+
+      const isHeading =
+        sectionTitles.has(trimmedLine) || trimmedLine.startsWith("Приоритет:");
+
+      return (
+        <p
+          key={`${idx}-${trimmedLine}`}
+          className={
+            isHeading
+              ? "mt-2 whitespace-pre-wrap text-sm font-semibold leading-relaxed"
+              : "whitespace-pre-wrap text-sm leading-relaxed"
+          }
+        >
+          {line}
+        </p>
+      );
+    });
+  };
+
   return (
     <div className="flex flex-col gap-4 pb-8">
       <Card>
@@ -171,7 +206,7 @@ export default function RecommendationsSection() {
                         Удалить
                       </Button>
                     </div>
-                    <p className="text-sm text-foreground">{item.summary}</p>
+                    <div className="text-foreground">{renderSummary(item.summary)}</div>
                     <div className="rounded-xl bg-muted/40 p-3 text-sm">
                       <div className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
                         Источник данных
