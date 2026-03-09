@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           amount: number | null;
           appointment_at: string | null;
+          appointment_end: string | null;
           category_name: string;
           client_name: string;
           client_phone: string;
@@ -31,6 +32,7 @@ export type Database = {
         Insert: {
           amount?: number | null;
           appointment_at?: string | null;
+          appointment_end?: string | null;
           category_name: string;
           client_name: string;
           client_phone: string;
@@ -44,6 +46,7 @@ export type Database = {
         Update: {
           amount?: number | null;
           appointment_at?: string | null;
+          appointment_end?: string | null;
           category_name?: string;
           client_name?: string;
           client_phone?: string;
@@ -142,7 +145,7 @@ export type Database = {
     };
     Functions: {
       archive_unconfirmed_appointments: {
-        Args: { stale_interval?: unknown };
+        Args: { stale_interval?: string };
         Returns: number;
       };
     };

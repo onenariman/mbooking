@@ -37,6 +37,7 @@ interface FormState {
   client_phone: string | null;
   service_name: string | null;
   appointment_at: string | null;
+  appointment_end: string | null;
   amount: number | null;
   notes: string | null;
 }
@@ -46,6 +47,7 @@ const initialState: FormState = {
   client_phone: null,
   service_name: null,
   appointment_at: null,
+  appointment_end: null,
   amount: null,
   notes: null,
 };
@@ -74,20 +76,31 @@ export default function AddBook() {
     return isPastUtcIso(form.appointment_at);
   }, [form.appointment_at]);
 
+  const isRangeInvalid = useMemo(() => {
+    if (!form.appointment_at || !form.appointment_end) {
+      return false;
+    }
+    return new Date(form.appointment_end) <= new Date(form.appointment_at);
+  }, [form.appointment_at, form.appointment_end]);
+
   const isSubmitDisabled = useMemo(() => {
     return (
       isPending ||
       isTimeInvalid ||
+      isRangeInvalid ||
       !form.client_name ||
       !form.service_name ||
-      !form.appointment_at
+      !form.appointment_at ||
+      !form.appointment_end
     );
   }, [
     form.appointment_at,
+    form.appointment_end,
     form.client_name,
     form.service_name,
     isPending,
     isTimeInvalid,
+    isRangeInvalid,
   ]);
 
   const handleSubmit = () => {
@@ -95,13 +108,20 @@ export default function AddBook() {
       return;
     }
 
-    if (!form.client_name || !form.service_name || !form.appointment_at) {
+    if (
+      !form.client_name ||
+      !form.service_name ||
+      !form.appointment_at ||
+      !form.appointment_end
+    ) {
       toast.error("Заполните обязательные поля");
       return;
     }
 
     const service = services.find((item) => item.name === form.service_name);
-    const category = categories.find((item) => item.id === service?.category_id);
+    const category = categories.find(
+      (item) => item.id === service?.category_id,
+    );
     const categoryName = category?.category_name ?? "Без категории";
 
     const payload = {
@@ -146,15 +166,17 @@ export default function AddBook() {
       >
         <SheetHeader className="pb-2 pt-4 text-white">
           <SheetTitle className="text-2xl">Новая запись</SheetTitle>
-          <SheetDescription className="text-xs text-white">
-            Детали визита
-          </SheetDescription>
+          <SheetDescription className="text-xs">Детали визита</SheetDescription>
         </SheetHeader>
 
         <div className="flex flex-col gap-y-2 py-6">
           <DateBook
-            value={form.appointment_at}
-            onChange={(value) => updateFormField("appointment_at", value)}
+            startValue={form.appointment_at}
+            endValue={form.appointment_end}
+            onChange={(start, end) => {
+              updateFormField("appointment_at", start);
+              updateFormField("appointment_end", end);
+            }}
           />
 
           <SearchClient
@@ -167,7 +189,9 @@ export default function AddBook() {
 
           <SearchService
             services={services}
-            getService={(service) => updateFormField("service_name", service.name)}
+            getService={(service) =>
+              updateFormField("service_name", service.name)
+            }
           />
 
           <Input
@@ -175,7 +199,10 @@ export default function AddBook() {
             className="placeholder:text-black"
             value={form.amount ?? ""}
             onChange={(event) => {
-              const numeric = formatPriceInput(event.target.value).replace(/\s/g, "");
+              const numeric = formatPriceInput(event.target.value).replace(
+                /\s/g,
+                "",
+              );
               updateFormField("amount", numeric ? Number(numeric) : null);
             }}
           />
@@ -190,7 +217,11 @@ export default function AddBook() {
         </div>
 
         <SheetFooter className="flex flex-col gap-3 border-t pb-8 pt-4">
-          <Button variant="default" onClick={handleSubmit} disabled={isSubmitDisabled}>
+          <Button
+            variant="default"
+            onClick={handleSubmit}
+            disabled={isSubmitDisabled}
+          >
             {isPending ? <Spinner className="mr-2" /> : "Забронировать визит"}
           </Button>
 
@@ -204,4 +235,3 @@ export default function AddBook() {
     </Sheet>
   );
 }
-

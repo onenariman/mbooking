@@ -42,9 +42,27 @@ const ItemBook = ({ book }: ItemProps) => {
         {book.appointment_at && (
           <div className="flex items-center gap-x-1 text-sm text-muted-foreground">
             <span>
-              {format(new Date(book.appointment_at), "dd MMMM HH:mm", {
-                locale: ru,
-              })}
+              {(() => {
+                const startDate = new Date(book.appointment_at);
+                if (!book.appointment_end) {
+                  return format(startDate, "dd MMMM HH:mm", { locale: ru });
+                }
+
+                const endDate = new Date(book.appointment_end);
+                const sameDay =
+                  startDate.toDateString() === endDate.toDateString();
+
+                const datePart = format(startDate, "dd MMMM", { locale: ru });
+                const startTime = format(startDate, "HH:mm", { locale: ru });
+                const endTime = format(endDate, "HH:mm", { locale: ru });
+
+                if (sameDay) {
+                  return `${datePart} ${startTime} - ${endTime}`;
+                }
+
+                const endDatePart = format(endDate, "dd MMMM", { locale: ru });
+                return `${datePart} ${startTime} - ${endDatePart} ${endTime}`;
+              })()}
             </span>
           </div>
         )}

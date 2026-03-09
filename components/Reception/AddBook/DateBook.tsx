@@ -16,7 +16,7 @@ import {
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Check } from "lucide-react";
+import { Check, CheckCheck } from "lucide-react";
 import {
   formatUtcIsoTime,
   fromUtcIso,
@@ -25,20 +25,44 @@ import {
 } from "@/src/lib/time";
 
 interface DateBookProps {
-  value: string | null;
-  onChange: (value: string | null) => void;
+  startValue: string | null;
+  endValue: string | null;
+  onChange: (startValue: string | null, endValue: string | null) => void;
 }
 
-export default function DateBook({ value, onChange }: DateBookProps) {
+const addMinutesToTime = (time: string, minutesToAdd: number) => {
+  const [hours, minutes] = time.split(":").map(Number);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+    return time;
+  }
+  const total = hours * 60 + minutes + minutesToAdd;
+  const nextHours = Math.floor((total % (24 * 60)) / 60);
+  const nextMinutes = total % 60;
+  return `${String(nextHours).padStart(2, "0")}:${String(nextMinutes).padStart(2, "0")}`;
+};
+
+export default function DateBook({
+  startValue,
+  endValue,
+  onChange,
+}: DateBookProps) {
   const [isOpened, setIsOpened] = useState(false);
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
-    value ? fromUtcIso(value) : new Date(),
+    startValue ? fromUtcIso(startValue) : new Date(),
   );
 
-  const [time, setTime] = useState(() => {
-    if (value) return formatUtcIsoTime(value);
+  const [startTime, setStartTime] = useState(() => {
+    if (startValue) return formatUtcIsoTime(startValue);
     return format(new Date(), "HH:mm");
+  });
+
+  const [endTime, setEndTime] = useState(() => {
+    if (endValue) return formatUtcIsoTime(endValue);
+    const base = startValue
+      ? formatUtcIsoTime(startValue)
+      : format(new Date(), "HH:mm");
+    return addMinutesToTime(base, 60);
   });
 
   const onChangeRef = useRef(onChange);
@@ -46,21 +70,35 @@ export default function DateBook({ value, onChange }: DateBookProps) {
     onChangeRef.current = onChange;
   }, [onChange]);
 
-  const combinedISO = useMemo(() => {
-    if (!selectedDate || !time) return null;
-    return toUtcIso(selectedDate, time);
-  }, [selectedDate, time]);
+  const combinedStartISO = useMemo(() => {
+    if (!selectedDate || !startTime) return null;
+    return toUtcIso(selectedDate, startTime);
+  }, [selectedDate, startTime]);
+
+  const combinedEndISO = useMemo(() => {
+    if (!selectedDate || !endTime) return null;
+    return toUtcIso(selectedDate, endTime);
+  }, [selectedDate, endTime]);
 
   const isPast = useMemo(() => {
-    if (!combinedISO) return false;
-    return isPastUtcIso(combinedISO);
-  }, [combinedISO]);
+    if (!combinedStartISO) return false;
+    return isPastUtcIso(combinedStartISO);
+  }, [combinedStartISO]);
+
+  const isInvalidRange = useMemo(() => {
+    if (!combinedStartISO || !combinedEndISO) return false;
+    return new Date(combinedEndISO) <= new Date(combinedStartISO);
+  }, [combinedStartISO, combinedEndISO]);
 
   useEffect(() => {
-    if (combinedISO !== value) {
-      onChangeRef.current?.(combinedISO);
+    if (combinedStartISO !== startValue || combinedEndISO !== endValue) {
+      onChangeRef.current?.(combinedStartISO, combinedEndISO);
     }
-  }, [combinedISO, value]);
+  }, [combinedStartISO, combinedEndISO, startValue, endValue]);
+
+  const labelText = selectedDate
+    ? `${format(selectedDate, "dd MMMM yyyy", { locale: ru })}, ${startTime} - ${endTime}`
+    : "Выбрать дату и время";
 
   return (
     <div className="space-y-2">
@@ -72,15 +110,14 @@ export default function DateBook({ value, onChange }: DateBookProps) {
             className={cn(
               "w-full justify-start text-left font-medium",
               !selectedDate && "text-muted-foreground",
-              isPast && "border-destructive/50 text-destructive",
+              (isPast || isInvalidRange) &&
+                "border-destructive/50 text-destructive",
             )}
           >
-            {selectedDate
-              ? `${format(selectedDate, "dd MMMM yyyy", { locale: ru })}, ${time}`
-              : "Выбрать дату и время"}
+            {labelText}
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="bg-white/95">
+        <PopoverContent align="start" className="bg-white">
           <Calendar
             mode="single"
             selected={selectedDate}
@@ -93,37 +130,60 @@ export default function DateBook({ value, onChange }: DateBookProps) {
             buttonVariant="link"
           />
 
-          <div className="flex items-center gap-2 mt-2 pt-2 border-t">
-            <Input
-              type="time"
-              value={time}
-              onKeyDown={(e) => e.preventDefault()}
-              onChange={(e) => setTime(e.target.value)}
-              className={cn(
-                "cursor-pointer text-black",
-                isPast &&
-                  "border-destructive text-destructive focus-visible:ring-destructive",
-              )}
-            />
-            <Button
-              type="button"
-              className="h-10"
-              onClick={() => setIsOpened(false)}
-            >
-              <Check />
-              OK
-            </Button>
-          </div>
+          <div className="border-t pt-2 w-full">
+            <div className="flex w-full items-end gap-2">
+              <div className="flex flex-col items-center gap-y-1 w-fit">
+                <Label className="text-xs text-black/60">Начало</Label>
+                <Input
+                  type="time"
+                  value={startTime}
+                  onKeyDown={(e) => e.preventDefault()}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className={cn(
+                    "cursor-pointer text-black w-fit",
+                    (isPast || isInvalidRange) &&
+                      "border-destructive text-destructive focus-visible:ring-destructive",
+                  )}
+                />
+              </div>
+              <div className="flex flex-col items-center gap-y-1 w-fit">
+                <Label className="text-xs text-black/60">Конец</Label>
+                <Input
+                  type="time"
+                  value={endTime}
+                  onKeyDown={(e) => e.preventDefault()}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  className={cn(
+                    "cursor-pointer text-black w-fit",
+                    isInvalidRange &&
+                      "border-destructive text-destructive focus-visible:ring-destructive",
+                  )}
+                />
+              </div>
+              <Button
+                type="button"
+                className="bg-blue-600 h-12 w-12 md:h-10 md:w-10"
+                onClick={() => setIsOpened(false)}
+                disabled={isInvalidRange}
+              >
+                <CheckCheck />
+              </Button>
+            </div>
 
-          {isPast ? (
-            <p className="text-[10px] text-destructive text-center mt-2 font-semibold italic">
-              Выбрано прошедшее время
-            </p>
-          ) : (
-            <p className="text-[10px] text-green-500  text-center mt-2 font-semibold italic">
-              Выбрано верно
-            </p>
-          )}
+            {isInvalidRange ? (
+              <p className="text-[10px] text-destructive text-center mt-2 font-semibold italic">
+                Время окончания должно быть позже начала
+              </p>
+            ) : isPast ? (
+              <p className="text-[10px] text-destructive text-center mt-2 font-semibold italic">
+                Выбрано прошедшее время
+              </p>
+            ) : (
+              <p className="text-[10px] text-green-500 text-center mt-2 font-semibold italic">
+                Выбрано верно
+              </p>
+            )}
+          </div>
         </PopoverContent>
       </Popover>
     </div>

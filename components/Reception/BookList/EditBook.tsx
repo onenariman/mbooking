@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,7 @@ import { ZodAppointment } from "@/src/schemas/books/bookSchema";
 import { useUpdateAppointment } from "@/src/hooks/appointments.hooks";
 import { formatPriceInput } from "@/src/validators/formatPriceInput";
 import { Spinner } from "@/components/ui/spinner";
+import DateBook from "../AddBook/DateBook";
 
 export function EditBook({
   book,
@@ -30,9 +31,21 @@ export function EditBook({
 }) {
   const { mutateAsync: updateAppointment, isPending } = useUpdateAppointment();
 
-  // Локальное состояние полей (по аналогии с AddBook)
   const [amount, setAmount] = useState<number | null>(book.amount);
   const [notes, setNotes] = useState<string>(book.notes ?? "");
+  const [appointmentAt, setAppointmentAt] = useState<string | null>(
+    book.appointment_at,
+  );
+  const [appointmentEnd, setAppointmentEnd] = useState<string | null>(
+    book.appointment_end ?? null,
+  );
+
+  const isRangeInvalid = useMemo(() => {
+    if (!appointmentAt || !appointmentEnd) {
+      return false;
+    }
+    return new Date(appointmentEnd) <= new Date(appointmentAt);
+  }, [appointmentAt, appointmentEnd]);
 
   const handleSave = async () => {
     try {
@@ -41,6 +54,8 @@ export function EditBook({
         updates: {
           amount,
           notes,
+          appointment_at: appointmentAt,
+          appointment_end: appointmentEnd,
         },
       });
       toast.success("Запись обновлена");
@@ -60,7 +75,16 @@ export function EditBook({
           </SheetDescription>
         </SheetHeader>
 
-        <div className=" px-6 flex flex-col gap-4">
+        <div className="px-6 flex flex-col gap-4">
+          <DateBook
+            startValue={appointmentAt}
+            endValue={appointmentEnd}
+            onChange={(start, end) => {
+              setAppointmentAt(start);
+              setAppointmentEnd(end);
+            }}
+          />
+
           <div className="space-y-2">
             <Label>Стоимость</Label>
             <Input
@@ -83,7 +107,11 @@ export function EditBook({
         </div>
 
         <SheetFooter className="flex flex-col gap-2">
-          <Button onClick={handleSave} disabled={isPending} className="w-full">
+          <Button
+            onClick={handleSave}
+            disabled={isPending || isRangeInvalid}
+            className="w-full"
+          >
             {isPending ? <Spinner className="mr-2" /> : "Сохранить изменения"}
           </Button>
           <Button

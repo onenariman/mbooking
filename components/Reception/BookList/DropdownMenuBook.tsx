@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { format } from "date-fns";
+import { ru } from "date-fns/locale";
 import { toast } from "sonner";
 import {
   CheckCircle2,
@@ -58,6 +60,18 @@ export default function DropdownMenuBook({ book }: DropdownMenuBookProps) {
     : false;
   const phone = book.client_phone;
   const whatsappPhone = phone.replace(/\D/g, "");
+  const messageText = useMemo(() => {
+    if (!book.appointment_at) {
+      return "Здравствуйте! Напоминаем о записи. Если есть вопросы — напишите или позвоните.";
+    }
+
+    const formatted = format(new Date(book.appointment_at), "dd MMMM HH:mm", {
+      locale: ru,
+    });
+
+    return `*"Мумина Эксперт"* \n\nПривет :-) Напоминаю о записи на *${formatted}* \n\n_Сообщение сгенерировано автоматически_`;
+  }, [book.appointment_at]);
+  const encodedMessage = encodeURIComponent(messageText);
 
   const canComplete = isPast && book.status !== "completed";
   const canSetNoShow = isPast && book.status !== "no_show";
@@ -137,6 +151,13 @@ export default function DropdownMenuBook({ book }: DropdownMenuBookProps) {
           <DropdownMenuSeparator />
 
           <DropdownMenuItem asChild>
+            <a href={`sms:${phone}?&body=${encodedMessage}`}>
+              <MessageCircle className="h-4 w-4 text-blue-500" />
+              Сообщение
+            </a>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem asChild>
             <a href={`tel:${phone}`}>
               <Phone className="h-4 w-4" />
               Позвонить
@@ -145,7 +166,7 @@ export default function DropdownMenuBook({ book }: DropdownMenuBookProps) {
 
           <DropdownMenuItem asChild disabled={!whatsappPhone}>
             <a
-              href={`https://wa.me/${whatsappPhone}`}
+              href={`https://wa.me/${whatsappPhone}?text=${encodedMessage}`}
               target="_blank"
               rel="noopener noreferrer"
             >
