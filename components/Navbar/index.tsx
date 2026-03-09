@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { Check, Menu, MonitorCog, Moon, Sun, SunMoon } from "lucide-react";
+import { Check, Menu, Moon, Sun, SunMoon } from "lucide-react";
 import { cn } from "@/src/lib/utils";
 import { createClient } from "@/src/utils/supabase/client";
 import { Button } from "../ui/button";
@@ -92,11 +92,14 @@ const NavbarMenu = () => {
         >
           <DropdownMenuGroup>
             <DropdownMenuItem asChild>
-              <Link href="/receptions">Ресепшен</Link>
+              <Link href="/receptions">Рецепшен</Link>
             </DropdownMenuItem>
 
             <DropdownMenuItem asChild>
               <Link href="/charts">Статистика</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/recommendations">Рекомендации</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>

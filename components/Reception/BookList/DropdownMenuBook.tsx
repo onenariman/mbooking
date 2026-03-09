@@ -11,6 +11,7 @@ import {
   EllipsisVertical,
   MessageCircle,
   Phone,
+  Send,
   Trash2,
   UserX,
   XCircle,
@@ -18,6 +19,7 @@ import {
 import { isPastUtcIso } from "@/src/lib/time";
 import { formatPriceInput } from "@/src/validators/formatPriceInput";
 import { useUpdateAppointment } from "@/src/hooks/appointments.hooks";
+import { useCreateFeedbackToken } from "@/src/hooks/feedback.hooks";
 import {
   ZodAppointment,
   ZodAppointmentStatus,
@@ -54,24 +56,26 @@ export default function DropdownMenuBook({ book }: DropdownMenuBookProps) {
   const [finalAmount, setFinalAmount] = useState(book.amount?.toString() || "");
 
   const { mutateAsync: updateAppointment, isPending } = useUpdateAppointment();
+  const { mutateAsync: createFeedbackToken, isPending: isCreatingToken } =
+    useCreateFeedbackToken();
 
-  const isPast = book.appointment_at
-    ? isPastUtcIso(book.appointment_at)
-    : false;
+  const isPast = book.appointment_at ? isPastUtcIso(book.appointment_at) : false;
   const phone = book.client_phone;
   const whatsappPhone = phone.replace(/\D/g, "");
-  const messageText = useMemo(() => {
+
+  const reminderMessageText = useMemo(() => {
     if (!book.appointment_at) {
-      return "Здравствуйте! Напоминаем о записи. Если есть вопросы — напишите или позвоните.";
+      return "Здравствуйте! Напоминаем о записи. Если есть вопросы, напишите или позвоните.";
     }
 
     const formatted = format(new Date(book.appointment_at), "dd MMMM HH:mm", {
       locale: ru,
     });
 
-    return `*"Мумина Эксперт"* \n\nПривет :-) Напоминаю о записи на *${formatted}* \n\n_Сообщение сгенерировано автоматически_`;
+    return `Мумина Эксперт\n\nПривет. Напоминаю о записи на ${formatted}\n\nСообщение сгенерировано автоматически.`;
   }, [book.appointment_at]);
-  const encodedMessage = encodeURIComponent(messageText);
+
+  const encodedReminderMessage = encodeURIComponent(reminderMessageText);
 
   const canComplete = isPast && book.status !== "completed";
   const canSetNoShow = isPast && book.status !== "no_show";
@@ -83,9 +87,9 @@ export default function DropdownMenuBook({ book }: DropdownMenuBookProps) {
 
     try {
       await updateAppointment({ id: book.id, updates: { status } });
-      toast.success("Статус обновлён");
+      toast.success("Статус обновлен");
     } catch {
-      toast.error("Ошибка обновления");
+      toast.error("Ошибка обновления статуса");
     }
   };
 
@@ -111,6 +115,45 @@ export default function DropdownMenuBook({ book }: DropdownMenuBookProps) {
       setShowCompleteDialog(false);
     } catch {
       toast.error("Ошибка при сохранении суммы");
+    }
+  };
+
+  const handleSendFeedback = async () => {
+    try {
+      const token = await createFeedbackToken("14 days");
+      const appBaseUrl = (
+        process.env.NEXT_PUBLIC_APP_URL || window.location.origin
+      ).replace(/\/$/, "");
+      const feedbackLink = `${appBaseUrl}/feedback/${token}`;
+      const feedbackMessage = [
+        "Пожалуйста, оставьте анонимный отзыв.",
+        "",
+        feedbackLink,
+        "",
+        "Спасибо!",
+      ].join("\n");
+      const encodedFeedbackMessage = encodeURIComponent(feedbackMessage);
+
+      if (whatsappPhone) {
+        window.open(
+          `https://wa.me/${whatsappPhone}?text=${encodedFeedbackMessage}`,
+          "_blank",
+          "noopener,noreferrer",
+        );
+        toast.success("Ссылка на отзыв открыта в WhatsApp");
+        return;
+      }
+
+      if (phone.trim()) {
+        window.location.href = `sms:${phone}?&body=${encodedFeedbackMessage}`;
+        toast.success("Ссылка на отзыв добавлена в SMS");
+        return;
+      }
+
+      await navigator.clipboard.writeText(feedbackLink);
+      toast.success("Ссылка на отзыв скопирована");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Ошибка отправки ссылки");
     }
   };
 
@@ -145,13 +188,13 @@ export default function DropdownMenuBook({ book }: DropdownMenuBookProps) {
             disabled={isPending || !canSetNoShow}
           >
             <UserX className="mr-2 h-4 w-4 text-red-500" />
-            Не пришёл
+            Не пришел
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />
 
           <DropdownMenuItem asChild>
-            <a href={`sms:${phone}?&body=${encodedMessage}`}>
+            <a href={`sms:${phone}?&body=${encodedReminderMessage}`}>
               <MessageCircle className="h-4 w-4 text-blue-500" />
               Сообщение
             </a>
@@ -164,9 +207,17 @@ export default function DropdownMenuBook({ book }: DropdownMenuBookProps) {
             </a>
           </DropdownMenuItem>
 
+          <DropdownMenuItem
+            onClick={handleSendFeedback}
+            disabled={isCreatingToken || (!phone.trim() && !whatsappPhone)}
+          >
+            <Send className="h-4 w-4 text-foreground" />
+            Отзыв
+          </DropdownMenuItem>
+
           <DropdownMenuItem asChild disabled={!whatsappPhone}>
             <a
-              href={`https://wa.me/${whatsappPhone}?text=${encodedMessage}`}
+              href={`https://wa.me/${whatsappPhone}?text=${encodedReminderMessage}`}
               target="_blank"
               rel="noopener noreferrer"
             >

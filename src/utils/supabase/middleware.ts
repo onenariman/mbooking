@@ -42,7 +42,13 @@ export const updateSession = async (request: NextRequest) => {
   // 4. ЛОГИКА ЗАМКА:
 
   // Если пользователя НЕТ и он пытается зайти на любую страницу, кроме /login
-  if (!user && !request.nextUrl.pathname.startsWith("/login")) {
+  const isPublicFeedbackRoute = request.nextUrl.pathname.startsWith("/feedback/");
+
+  if (
+    !user &&
+    !request.nextUrl.pathname.startsWith("/login") &&
+    !isPublicFeedbackRoute
+  ) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
