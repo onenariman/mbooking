@@ -9,6 +9,7 @@ import {
   ZodAppointmentStatus,
 } from "@/src/schemas/books/bookSchema";
 import DropdownMenuBook from "./DropdownMenuBook";
+import BookDescription from "./BookDescription";
 
 interface ItemProps {
   book: ZodAppointment;
@@ -63,7 +64,8 @@ const ItemBook = ({ book }: ItemProps) => {
         </div>
       </div>
 
-      <div className="ml-3 shrink-0">
+      <div className="ml-3 shrink-0 flex items-center gap-x-2">
+        <BookDescription notes={book.notes} />
         <DropdownMenuBook book={book} />
       </div>
     </div>
