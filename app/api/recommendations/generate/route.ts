@@ -157,9 +157,13 @@ const buildPrompt = (params: {
 
 const normalizeSummary = (rawResponse: string): string => {
   const trimmed = rawResponse.trim();
+  const cleaned = trimmed
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
 
   try {
-    const parsed = JSON.parse(trimmed) as {
+    const parsed = JSON.parse(cleaned) as {
       summary?: string;
       strengths?: string[];
       issues?: Array<{
@@ -230,7 +234,7 @@ const normalizeSummary = (rawResponse: string): string => {
       `Приоритет: ${parsed.priority || "medium"}`,
     ].join("\n");
   } catch {
-    return trimmed;
+    return cleaned;
   }
 };
 
