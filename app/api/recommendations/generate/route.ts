@@ -20,6 +20,27 @@ type OllamaGenerateResponse = {
   eval_count?: number;
 };
 
+type YandexCompletionResponse = {
+  result?: {
+    alternatives?: Array<{
+      message?: {
+        text?: string;
+      };
+    }>;
+    usage?: {
+      inputTextTokens?: string | number;
+      completionTokens?: string | number;
+    };
+  };
+};
+
+type LlmResult = {
+  modelName: string;
+  responseText: string;
+  inputTokens: number | null;
+  outputTokens: number | null;
+};
+
 const toDateOnlyIso = (date: Date) => date.toISOString().slice(0, 10);
 
 const getPeriodRange = (period: Period): PeriodRange => {
@@ -51,72 +72,82 @@ const buildPrompt = (params: {
   to: string;
   feedback: string[];
 }) => {
-  const numberedReviews = params.feedback
+  const horizonLabel =
+    params.period === "week"
+      ? "7 дней"
+      : params.period === "month"
+        ? "30 дней"
+        : "30 дней (из долгого периода, с фокусом на ближайший месяц)";
+
+  const compactFeedback = params.feedback
+    .slice(0, 10)
+    .map((item) => item.trim().replace(/\s+/g, " ").slice(0, 350));
+
+  const numberedReviews = compactFeedback
     .map((item, idx) => `${idx + 1}. ${item}`)
     .join("\n");
 
   return [
     "Ты — старший аналитик клиентского опыта студии электроэпиляции и косметологии.",
-    "Твоя задача: по анонимным отзывам за период выдать практичные рекомендации для владельца бизнеса.",
+    "По анонимным отзывам за период подготовь практичные рекомендации для владельца студии.",
     "",
-    "Твоя экспертиза охватывает специфику ниши:",
-    "- Услуга предполагает длительный курс (от нескольких месяцев до 2 лет), поэтому retention и возврат клиента критичны.",
-    "- Типичные триггеры оттока: ощущение отсутствия прогресса, боль без предупреждения, ощущение нестерильности, непрозрачность цен, неудобный график, слабая коммуникация.",
-    "- Ключевые метрики здоровья студии: удовлетворенность сеансом, готовность рекомендовать, возврат на следующий визит.",
-    "- Отделяй симптом от причины: «клиент упоминает боль» — симптом; «мастер не объяснил ощущения заранее» — причина.",
+    "Контекст ниши:",
+    "- процедуры проходят курсом от нескольких месяцев до 2 лет, поэтому критичен возврат клиента",
+    "- типичные причины оттока: ощущение отсутствия прогресса, боль без предупреждения, сомнения в стерильности, непрозрачность цен, неудобный график, слабая коммуникация",
+    "- важные показатели: удовлетворенность сеансом, готовность рекомендовать, возврат на следующий визит",
+    "- отделяй симптом от причины (например: «больно» — симптом, «мастер не объяснил ощущения» — причина)",
     "",
-    "Верни СТРОГО JSON (без markdown, без пояснений вне JSON).",
-    "Верни корректный JSON-объект. Если поле не заполнено, используй значение «Недостаточно данных».",
+    "Верни СТРОГО JSON без markdown и пояснений вне JSON.",
+    "Если информации недостаточно — используй значение «Недостаточно данных».",
     "",
-    "Схема ответа:",
+    "Формат ответа:",
     "{",
-    '  "summary": "string — общая тональность, доминирующие темы, уровень лояльности. Если данных мало или сигнал слабый — явно укажи это.",',
-    '  "strengths": ["string", "string", "string"],',
+    '  "summary": "общая тональность, ключевые темы и уровень лояльности. Если сигнал слабый — укажи это",',
+    '  "strengths": ["string","string","string"],',
     '  "issues": [',
     "    {",
-    '      "issue": "string — суть проблемы",',
-    '      "root_cause": "string — вероятная причина, не симптом",',
+    '      "issue": "суть проблемы",',
+    '      "root_cause": "вероятная причина (не симптом)",',
     '      "retention_impact": "high|medium|low"',
     "    }",
     "  ],",
-    '  "actions_next_week": [',
+    '  "actions_plan": [',
     "    {",
-    '      "action": "string — конкретное действие, без воды",',
+    '      "action": "конкретное действие",',
     '      "owner": "admin|master|owner",',
     '      "impact": "high|medium|low",',
     '      "effort": "high|medium|low",',
-    '      "kpi": "string — измеримый результат за 7 дней",',
-    '      "deadline_day": "1|2|3|4|5|6|7"',
+    '      "kpi": "измеримый результат на горизонт плана",',
+    '      "deadline": "YYYY-MM-DD или D+N"',
     "    }",
     "  ],",
-    '  "quick_win": "string — одно действие, реализуемое за 24 часа, заметное для клиента",',
+    '  "quick_win": "заметное для клиента улучшение, реализуемое за 24 часа",',
     '  "scripts": {',
-    '    "reminder_message": "string — короткий вежливый текст напоминания о записи",',
-    '    "late_message": "string — текст при задержке приема: извинение + новый ориентир по времени"',
+    '    "reminder_message": "короткое вежливое напоминание о записи (до 3 предложений)",',
+    '    "late_message": "сообщение при задержке: извинение и новый ориентир по времени (до 3 предложений)"',
     "  },",
     '  "priority": "high|medium|low"',
     "}",
     "",
-    "Требования к анализу:",
-    "- Язык: русский. Деловой, конкретный, без воды и эмодзи.",
-    "- Опирайся ТОЛЬКО на переданные отзывы. Не добавляй факты, которых нет во входных данных.",
-    "- Если данных мало, укажи «Недостаточно данных» в соответствующем поле вместо домыслов.",
-    "- strengths: 3 пункта — только то, что клиенты отметили явно и повторно.",
-    "- issues: 3 пункта с root_cause и оценкой влияния на возврат клиента.",
-    "- actions_next_week: 3-5 действий, выполнимых за 7 дней, каждое с измеримым KPI и deadline_day от 1 до 7.",
-    "- quick_win: малозатратное, но высокозаметное для клиента улучшение.",
-    "- scripts.reminder_message: до 3 предложений, теплый тон, без давления.",
-    "- scripts.late_message: до 3 предложений, с извинением, конкретным новым временем ожидания, без оправданий.",
-    "- priority:",
-    "  - high — повторяющиеся жалобы на задержки, сервис, чистоту или коммуникацию;",
-    "  - medium — смешанный сигнал, единичные негативные темы;",
-    "  - low — преобладает позитив, единичные замечания.",
-    "- Не используй медицинские обещания, категоричные формулировки и обобщения без опоры на отзывы.",
+    "Правила анализа:",
+    "- язык: русский, деловой стиль, без воды и эмодзи",
+    "- опирайся только на переданные отзывы",
+    "- не добавляй факты, которых нет во входных данных",
+    "- strengths: 3 пункта, только явно отмеченные клиентами и повторяющиеся",
+    "- issues: 3 проблемы с root_cause и влиянием на возврат клиента",
+    `- actions_plan: 3–5 конкретных действий на горизонт ${horizonLabel}`,
+    "- каждый action должен иметь KPI и реалистичный deadline",
+    "",
+    "Определение приоритета:",
+    "- high — повторяющиеся жалобы на задержки, сервис, чистоту или коммуникацию",
+    "- medium — смешанный сигнал, отдельные негативные темы",
+    "- low — в основном позитивные отзывы, единичные замечания",
     "",
     "Контекст периода:",
     `period_type: ${params.period}`,
     `period_from: ${params.from}`,
     `period_to: ${params.to}`,
+    `planning_horizon: ${horizonLabel}`,
     `reviews_count: ${params.feedback.length}`,
     "",
     "Отзывы:",
@@ -136,6 +167,14 @@ const normalizeSummary = (rawResponse: string): string => {
         root_cause?: string;
         retention_impact?: "high" | "medium" | "low" | string;
       }>;
+      actions_plan?: Array<{
+        action?: string;
+        owner?: "admin" | "master" | "owner" | string;
+        impact?: "high" | "medium" | "low" | string;
+        effort?: "high" | "medium" | "low" | string;
+        kpi?: string;
+        deadline?: string;
+      }>;
       actions_next_week?: Array<{
         action?: string;
         owner?: "admin" | "master" | "owner" | string;
@@ -152,7 +191,10 @@ const normalizeSummary = (rawResponse: string): string => {
     const summary = parsed.summary?.trim() || "Недостаточно данных";
     const strengths = (parsed.strengths ?? []).filter(Boolean).slice(0, 3);
     const issues = (parsed.issues ?? []).slice(0, 3);
-    const actions = (parsed.actions_next_week ?? [])
+    const actionsSource = (parsed.actions_plan?.length
+      ? parsed.actions_plan
+      : parsed.actions_next_week) ?? [];
+    const actions = actionsSource
       .slice(0, 5)
       .map((item, idx) => {
         const action = item.action || "Недостаточно данных";
@@ -160,8 +202,13 @@ const normalizeSummary = (rawResponse: string): string => {
         const owner = item.owner || "Недостаточно данных";
         const impact = item.impact || "medium";
         const effort = item.effort || "medium";
-        const deadlineDay = item.deadline_day ?? "Недостаточно данных";
-        return `${idx + 1}. ${action} (owner: ${owner}, impact: ${impact}, effort: ${effort}, KPI: ${kpi}, day: ${deadlineDay})`;
+        const deadline =
+          "deadline" in item && item.deadline !== undefined
+            ? item.deadline
+            : "deadline_day" in item
+              ? (item.deadline_day ?? "Недостаточно данных")
+              : "Недостаточно данных";
+        return `${idx + 1}. ${action} (owner: ${owner}, impact: ${impact}, effort: ${effort}, KPI: ${kpi}, deadline: ${deadline})`;
       });
     const issuesText = issues.map((item, idx) => {
       const issue = item.issue || "Недостаточно данных";
@@ -176,7 +223,7 @@ const normalizeSummary = (rawResponse: string): string => {
       `Сильные стороны: ${strengths.length ? strengths.join("; ") : "Недостаточно данных"}`,
       `Зоны роста: ${issuesText.length ? issuesText.join(" ") : "Недостаточно данных"}`,
       "",
-      `Действия на неделю: ${actions.length ? actions.join(" ") : "Недостаточно данных"}`,
+      `План действий: ${actions.length ? actions.join(" ") : "Недостаточно данных"}`,
       `Быстрая победа: ${parsed.quick_win || "Недостаточно данных"}`,
       `Скрипт напоминания: ${parsed.scripts?.reminder_message || "Недостаточно данных"}`,
       `Скрипт при задержке: ${parsed.scripts?.late_message || "Недостаточно данных"}`,
@@ -185,6 +232,158 @@ const normalizeSummary = (rawResponse: string): string => {
   } catch {
     return trimmed;
   }
+};
+
+const parseTokenCount = (value: string | number | undefined): number | null => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.trunc(value);
+  }
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return Math.trunc(parsed);
+    }
+  }
+  return null;
+};
+
+const callOllama = async (prompt: string): Promise<LlmResult> => {
+  const baseUrl = process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
+  const model = process.env.OLLAMA_MODEL || "qwen2.5:7b";
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 240_000);
+
+  let ollamaResponse: Response;
+  try {
+    ollamaResponse = await fetch(`${baseUrl}/api/generate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        prompt,
+        stream: false,
+        options: {
+          num_predict: 320,
+          temperature: 0.2,
+        },
+      }),
+      cache: "no-store",
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("Ollama timeout: модель не ответила за 240 секунд");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  if (!ollamaResponse.ok) {
+    const text = await ollamaResponse.text();
+    throw new Error(`Ollama error: ${text || ollamaResponse.statusText}`);
+  }
+
+  const llmData = (await ollamaResponse.json()) as OllamaGenerateResponse;
+  const responseText = llmData.response?.trim() || "";
+  if (!responseText) {
+    throw new Error("Пустой ответ от модели");
+  }
+
+  return {
+    modelName: model,
+    responseText,
+    inputTokens: llmData.prompt_eval_count ?? null,
+    outputTokens: llmData.eval_count ?? null,
+  };
+};
+
+const callYandex = async (prompt: string): Promise<LlmResult> => {
+  const folderId = process.env.YANDEX_FOLDER_ID;
+  const modelUri =
+    process.env.YANDEX_MODEL_URI || `gpt://${folderId}/yandexgpt/latest`;
+  const iamToken = process.env.YANDEX_IAM_TOKEN;
+  const apiKey = process.env.YANDEX_API_KEY;
+
+  if (!folderId) {
+    throw new Error("YANDEX_FOLDER_ID не задан");
+  }
+  if (!iamToken && !apiKey) {
+    throw new Error("Нужен YANDEX_IAM_TOKEN или YANDEX_API_KEY");
+  }
+
+  const authHeader = iamToken ? `Bearer ${iamToken}` : `Api-Key ${apiKey}`;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 120_000);
+
+  let yandexResponse: Response;
+  try {
+    yandexResponse = await fetch(
+      "https://llm.api.cloud.yandex.net/foundationModels/v1/completion",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: authHeader,
+          "x-folder-id": folderId,
+        },
+        body: JSON.stringify({
+          modelUri,
+          completionOptions: {
+            stream: false,
+            temperature: 0.2,
+            maxTokens: "800",
+          },
+          messages: [
+            {
+              role: "user",
+              text: prompt,
+            },
+          ],
+        }),
+        cache: "no-store",
+        signal: controller.signal,
+      },
+    );
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("Yandex AI timeout: модель не ответила за 120 секунд");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  if (!yandexResponse.ok) {
+    const text = await yandexResponse.text();
+    throw new Error(`Yandex AI error: ${text || yandexResponse.statusText}`);
+  }
+
+  const data = (await yandexResponse.json()) as YandexCompletionResponse;
+  const responseText =
+    data.result?.alternatives?.[0]?.message?.text?.trim() || "";
+  if (!responseText) {
+    throw new Error("Пустой ответ от Yandex AI");
+  }
+
+  return {
+    modelName: modelUri,
+    responseText,
+    inputTokens: parseTokenCount(data.result?.usage?.inputTextTokens),
+    outputTokens: parseTokenCount(data.result?.usage?.completionTokens),
+  };
+};
+
+const runLlm = async (prompt: string): Promise<LlmResult> => {
+  const provider = (process.env.AI_PROVIDER || "ollama").toLowerCase();
+  if (provider === "yandex") {
+    return callYandex(prompt);
+  }
+  return callOllama(prompt);
 };
 
 export async function POST(request: NextRequest) {
@@ -221,7 +420,10 @@ export async function POST(request: NextRequest) {
       .order("created_at", { ascending: false });
 
     if (feedbackError) {
-      return NextResponse.json({ message: feedbackError.message }, { status: 500 });
+      return NextResponse.json(
+        { message: feedbackError.message },
+        { status: 500 },
+      );
     }
 
     const feedback = (feedbackData ?? []).map((item) => item.feedback_text);
@@ -236,69 +438,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const baseUrl = process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
-    const model = process.env.OLLAMA_MODEL || "qwen2.5:7b";
-
     const prompt = buildPrompt({
       period,
       from: range.from,
       to: range.to,
       feedback,
     });
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 90_000);
-    let ollamaResponse: Response;
-
-    try {
-      ollamaResponse = await fetch(`${baseUrl}/api/generate`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model,
-          prompt,
-          stream: false,
-          options: {
-            num_predict: 700,
-            temperature: 0.2,
-          },
-        }),
-        cache: "no-store",
-        signal: controller.signal,
-      });
-    } catch (error) {
-      if (error instanceof Error && error.name === "AbortError") {
-        return NextResponse.json(
-          { message: "Ollama timeout: модель не ответила за 90 секунд" },
-          { status: 504 },
-        );
-      }
-      throw error;
-    } finally {
-      clearTimeout(timeoutId);
-    }
-
-    if (!ollamaResponse.ok) {
-      const text = await ollamaResponse.text();
-      return NextResponse.json(
-        { message: `Ollama error: ${text || ollamaResponse.statusText}` },
-        { status: 502 },
-      );
-    }
-
-    const llmData = (await ollamaResponse.json()) as OllamaGenerateResponse;
-    const responseText = llmData.response?.trim() || "";
-
-    if (!responseText) {
-      return NextResponse.json(
-        { message: "Пустой ответ от модели" },
-        { status: 502 },
-      );
-    }
-
-    const summary = normalizeSummary(responseText);
+    const llm = await runLlm(prompt);
+    const summary = normalizeSummary(llm.responseText);
 
     const { data: inserted, error: insertError } = await supabase
       .from("ai_recommendations")
@@ -309,15 +456,18 @@ export async function POST(request: NextRequest) {
         period_to: range.to,
         source_count: feedback.length,
         summary,
-        model_name: model,
-        input_tokens: llmData.prompt_eval_count ?? null,
-        output_tokens: llmData.eval_count ?? null,
+        model_name: llm.modelName,
+        input_tokens: llm.inputTokens,
+        output_tokens: llm.outputTokens,
       })
       .select("*")
       .single();
 
     if (insertError) {
-      return NextResponse.json({ message: insertError.message }, { status: 500 });
+      return NextResponse.json(
+        { message: insertError.message },
+        { status: 500 },
+      );
     }
 
     return NextResponse.json({ data: inserted });
@@ -333,4 +483,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
