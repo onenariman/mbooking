@@ -54,8 +54,8 @@ export function EditBook({
         updates: {
           amount,
           notes,
-          appointment_at: appointmentAt,
-          appointment_end: appointmentEnd,
+          appointment_at: appointmentAt ?? undefined,
+          appointment_end: appointmentEnd ?? undefined,
         },
       });
       toast.success("Запись обновлена");
