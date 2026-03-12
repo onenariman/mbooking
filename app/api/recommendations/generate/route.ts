@@ -1,17 +1,42 @@
-﻿import { addDays, format as formatDate, subDays, subMonths } from "date-fns";
+﻿import { addDays, differenceInCalendarDays, format as formatDate, subDays, subMonths } from "date-fns";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/src/utils/supabase/server";
 
-const requestSchema = z.object({
-  period: z.enum(["week", "month", "3m", "6m", "9m", "12m"]),
-});
+const periodSchema = z.enum(["week", "month", "3m", "6m", "9m", "12m"]);
+const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
-type Period = z.infer<typeof requestSchema>["period"];
+const requestSchema = z
+  .object({
+    period: periodSchema.optional(),
+    from: dateSchema.optional(),
+    to: dateSchema.optional(),
+  })
+  .refine(
+    (data) =>
+      (data.period && !data.from && !data.to) ||
+      (!data.period && data.from && data.to),
+    { message: "Некорректный запрос" },
+  );
+
+type Period = z.infer<typeof periodSchema>;
 
 type PeriodRange = {
   from: string;
   to: string;
+};
+
+type FeedbackScores = {
+  score_result: number | null;
+  score_explanation: number | null;
+  score_comfort: number | null;
+  score_booking: number | null;
+  score_recommendation: number | null;
+};
+
+type FeedbackItem = {
+  text: string;
+  scores: FeedbackScores;
 };
 
 type OllamaGenerateResponse = {
@@ -67,88 +92,97 @@ const getPeriodRange = (period: Period): PeriodRange => {
 };
 
 const buildPrompt = (params: {
-  period: Period;
+  periodType: string;
   from: string;
   to: string;
-  feedback: string[];
+  horizonLabel: string;
+  feedback: FeedbackItem[];
 }) => {
-  const horizonLabel =
-    params.period === "week"
-      ? "7 дней"
-      : params.period === "month"
-        ? "30 дней"
-        : "30 дней (из долгого периода, с фокусом на ближайший месяц)";
+  const horizonLabel = params.horizonLabel;
 
-  const compactFeedback = params.feedback
-    .slice(0, 10)
-    .map((item) => item.trim().replace(/\s+/g, " ").slice(0, 350));
+  const formatScore = (value: number | null) =>
+    Number.isFinite(value) ? String(value) : "нет";
+
+  const compactFeedback = params.feedback.slice(0, 10).map((item) => {
+    const text = item.text.trim().replace(/\s+/g, " ").slice(0, 350);
+    const scores = [
+      `рез=${formatScore(item.scores.score_result)}`,
+      `объясн=${formatScore(item.scores.score_explanation)}`,
+      `комфорт=${formatScore(item.scores.score_comfort)}`,
+      `запись=${formatScore(item.scores.score_booking)}`,
+      `рек=${formatScore(item.scores.score_recommendation)}`,
+    ].join(", ");
+    return `${text} | оценки: ${scores}`;
+  });
 
   const numberedReviews = compactFeedback
     .map((item, idx) => `${idx + 1}. ${item}`)
     .join("\n");
 
+  const scoreStats = (() => {
+    const keys = [
+      "score_result",
+      "score_explanation",
+      "score_comfort",
+      "score_booking",
+      "score_recommendation",
+    ] as const;
+    const labels: Record<(typeof keys)[number], string> = {
+      score_result: "результат процедуры",
+      score_explanation: "объяснения мастера",
+      score_comfort: "комфорт во время процедуры",
+      score_booking: "удобство записи",
+      score_recommendation: "готовность рекомендовать",
+    };
+
+    return keys
+      .map((key) => {
+        const values = params.feedback
+          .map((item) => item.scores[key])
+          .filter((value): value is number => Number.isFinite(value));
+        if (!values.length) {
+          return `- ${labels[key]}: нет данных`;
+        }
+        const avg =
+          values.reduce((sum, value) => sum + value, 0) / values.length;
+        const rounded = Math.round(avg * 10) / 10;
+        return `- ${labels[key]}: ${rounded} (n=${values.length})`;
+      })
+      .join("\n");
+  })();
+
   return [
-    "Ты — старший аналитик клиентского опыта студии электроэпиляции и косметологии.",
-    "По анонимным отзывам за период подготовь практичные рекомендации для владельца студии.",
+    "Ты — аналитик клиентского опыта студии электроэпиляции и косметологии.",
+    "Сделай практичные рекомендации по отзывам и оценкам 1–5. Используй только данные ниже.",
+    "Если данных не хватает — пиши «Недостаточно данных». Верни СТРОГО JSON без markdown.",
     "",
-    "Контекст ниши:",
-    "- процедуры проходят курсом от нескольких месяцев до 2 лет, поэтому критичен возврат клиента",
-    "- типичные причины оттока: ощущение отсутствия прогресса, боль без предупреждения, сомнения в стерильности, непрозрачность цен, неудобный график, слабая коммуникация",
-    "- важные показатели: удовлетворенность сеансом, готовность рекомендовать, возврат на следующий визит",
-    "- отделяй симптом от причины (например: «больно» — симптом, «мастер не объяснил ощущения» — причина)",
-    "",
-    "Верни СТРОГО JSON без markdown и пояснений вне JSON.",
-    "Если информации недостаточно — используй значение «Недостаточно данных».",
-    "",
-    "Формат ответа:",
+    "Формат ответа (строго):",
     "{",
-    '  "summary": "общая тональность, ключевые темы и уровень лояльности. Если сигнал слабый — укажи это",',
+    '  "summary": "тональность, ключевые темы и лояльность",',
     '  "strengths": ["string","string","string"],',
-    '  "issues": [',
-    "    {",
-    '      "issue": "суть проблемы",',
-    '      "root_cause": "вероятная причина (не симптом)",',
-    '      "retention_impact": "high|medium|low"',
-    "    }",
-    "  ],",
-    '  "actions_plan": [',
-    "    {",
-    '      "action": "конкретное действие",',
-    '      "owner": "admin|master|owner",',
-    '      "impact": "high|medium|low",',
-    '      "effort": "high|medium|low",',
-    '      "kpi": "измеримый результат на горизонт плана",',
-    '      "deadline": "YYYY-MM-DD (например 2026-03-20)"',
-    "    }",
-    "  ],",
-    '  "quick_win": "заметное для клиента улучшение, реализуемое за 24 часа",',
-    '  "scripts": {',
-    '    "reminder_message": "короткое вежливое напоминание о записи (до 3 предложений)",',
-    '    "late_message": "сообщение при задержке: извинение и новый ориентир по времени (до 3 предложений)"',
-    "  },",
+    '  "issues": [{"issue":"string","root_cause":"string","retention_impact":"high|medium|low"}],',
+    '  "actions_plan": [{"action":"string","owner":"admin|master|owner","impact":"high|medium|low","effort":"high|medium|low","kpi":"string","deadline":"YYYY-MM-DD"}],',
+    '  "quick_win": "string",',
+    '  "scripts": {"reminder_message":"string","late_message":"string"},',
     '  "priority": "high|medium|low"',
     "}",
     "",
-    "Правила анализа:",
-    "- язык: русский, деловой стиль, без воды и эмодзи",
-    "- опирайся только на переданные отзывы",
-    "- не добавляй факты, которых нет во входных данных",
-    "- strengths: 3 пункта, только явно отмеченные клиентами и повторяющиеся",
-    "- issues: 3 проблемы с root_cause и влиянием на возврат клиента",
-    `- actions_plan: 3–5 конкретных действий на горизонт ${horizonLabel}`,
-    "- каждый action должен иметь KPI и реалистичный deadline",
-    "",
-    "Определение приоритета:",
-    "- high — повторяющиеся жалобы на задержки, сервис, чистоту или коммуникацию",
-    "- medium — смешанный сигнал, отдельные негативные темы",
-    "- low — в основном позитивные отзывы, единичные замечания",
+    "Правила:",
+    "- язык: русский, деловой",
+    "- strengths: 3 пункта, только повторяющиеся позитивы",
+    "- issues: 3 проблемы, root_cause не симптом",
+    `- actions_plan: 3–5 действий на горизонт ${horizonLabel}`,
+    "- учитывай оценки; низкие (<=3) считаются сигналом проблемы",
     "",
     "Контекст периода:",
-    `period_type: ${params.period}`,
+    `period_type: ${params.periodType}`,
     `period_from: ${params.from}`,
     `period_to: ${params.to}`,
     `planning_horizon: ${horizonLabel}`,
     `reviews_count: ${params.feedback.length}`,
+    "",
+    "Сводные оценки (среднее; n):",
+    scoreStats || "нет данных",
     "",
     "Отзывы:",
     numberedReviews,
@@ -442,13 +476,46 @@ export async function POST(request: NextRequest) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        { message: "Некорректный период" },
+        { message: "Некорректный запрос" },
         { status: 400 },
       );
     }
 
-    const period = parsed.data.period;
-    const range = getPeriodRange(period);
+    let periodType: Period | "custom";
+    let range: PeriodRange;
+    let horizonLabel: string;
+
+    if (parsed.data.period) {
+      periodType = parsed.data.period;
+      range = getPeriodRange(periodType);
+      horizonLabel =
+        periodType === "week"
+          ? "7 дней"
+          : periodType === "month"
+            ? "30 дней"
+            : "30 дней (из долгого периода, с фокусом на ближайший месяц)";
+    } else {
+      const from = parsed.data.from ?? "";
+      const to = parsed.data.to ?? "";
+      const fromDate = new Date(`${from}T00:00:00.000Z`);
+      const toDate = new Date(`${to}T00:00:00.000Z`);
+      if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+        return NextResponse.json(
+          { message: "Некорректный диапазон дат" },
+          { status: 400 },
+        );
+      }
+      if (fromDate > toDate) {
+        return NextResponse.json(
+          { message: "Дата начала позже даты окончания" },
+          { status: 400 },
+        );
+      }
+      const days = Math.max(1, differenceInCalendarDays(toDate, fromDate) + 1);
+      periodType = "custom";
+      range = { from, to };
+      horizonLabel = `${days} дней`;
+    }
     const supabase = await createClient();
 
     const {
@@ -462,7 +529,9 @@ export async function POST(request: NextRequest) {
 
     const { data: feedbackData, error: feedbackError } = await supabase
       .from("feedback_responses")
-      .select("feedback_text")
+      .select(
+        "feedback_text, score_result, score_explanation, score_comfort, score_booking, score_recommendation",
+      )
       .eq("user_id", user.id)
       .gte("created_at", `${range.from}T00:00:00.000Z`)
       .lte("created_at", `${range.to}T23:59:59.999Z`)
@@ -475,7 +544,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const feedback = (feedbackData ?? []).map((item) => item.feedback_text);
+    const feedback = (feedbackData ?? []).map((item) => ({
+      text: item.feedback_text,
+      scores: {
+        score_result: item.score_result ?? null,
+        score_explanation: item.score_explanation ?? null,
+        score_comfort: item.score_comfort ?? null,
+        score_booking: item.score_booking ?? null,
+        score_recommendation: item.score_recommendation ?? null,
+      },
+    }));
 
     if (feedback.length < 3) {
       return NextResponse.json(
@@ -488,9 +566,10 @@ export async function POST(request: NextRequest) {
     }
 
     const prompt = buildPrompt({
-      period,
+      periodType,
       from: range.from,
       to: range.to,
+      horizonLabel,
       feedback,
     });
     const llm = await runLlm(prompt);
@@ -500,7 +579,7 @@ export async function POST(request: NextRequest) {
       .from("ai_recommendations")
       .insert({
         user_id: user.id,
-        period_type: period,
+        period_type: periodType,
         period_from: range.from,
         period_to: range.to,
         source_count: feedback.length,
@@ -532,4 +611,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+
 

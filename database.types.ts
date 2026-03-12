@@ -152,6 +152,11 @@ export type Database = {
           feedback_text: string
           id: string
           period_bucket: string
+          score_booking: number | null
+          score_comfort: number | null
+          score_explanation: number | null
+          score_recommendation: number | null
+          score_result: number | null
           user_id: string
         }
         Insert: {
@@ -159,6 +164,11 @@ export type Database = {
           feedback_text: string
           id?: string
           period_bucket?: string
+          score_booking?: number | null
+          score_comfort?: number | null
+          score_explanation?: number | null
+          score_recommendation?: number | null
+          score_result?: number | null
           user_id: string
         }
         Update: {
@@ -166,6 +176,11 @@ export type Database = {
           feedback_text?: string
           id?: string
           period_bucket?: string
+          score_booking?: number | null
+          score_comfort?: number | null
+          score_explanation?: number | null
+          score_recommendation?: number | null
+          score_result?: number | null
           user_id?: string
         }
         Relationships: []
@@ -249,7 +264,15 @@ export type Database = {
         Returns: string
       }
       submit_feedback: {
-        Args: { p_feedback_text: string; p_token: string }
+        Args: {
+          p_feedback_text: string
+          p_score_booking: number | null
+          p_score_comfort: number | null
+          p_score_explanation: number | null
+          p_score_recommendation: number | null
+          p_score_result: number | null
+          p_token: string
+        }
         Returns: string
       }
     }
@@ -384,3 +407,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+

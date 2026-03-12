@@ -24,6 +24,11 @@ export const feedbackResponseSchema = z.object({
   id: z.string(),
   user_id: z.string(),
   feedback_text: z.string(),
+  score_result: z.number().int().min(1).max(5).nullable(),
+  score_explanation: z.number().int().min(1).max(5).nullable(),
+  score_comfort: z.number().int().min(1).max(5).nullable(),
+  score_booking: z.number().int().min(1).max(5).nullable(),
+  score_recommendation: z.number().int().min(1).max(5).nullable(),
   created_at: z.string(),
   period_bucket: z.string(),
 });
@@ -51,6 +56,11 @@ export const submitFeedbackSchema = z.object({
     .string()
     .min(5, "Отзыв слишком короткий")
     .max(3000, "Отзыв слишком длинный"),
+  score_result: z.number().int().min(1).max(5).nullable().optional(),
+  score_explanation: z.number().int().min(1).max(5).nullable().optional(),
+  score_comfort: z.number().int().min(1).max(5).nullable().optional(),
+  score_booking: z.number().int().min(1).max(5).nullable().optional(),
+  score_recommendation: z.number().int().min(1).max(5).nullable().optional(),
 });
 
 export type ZodRecommendationPeriod = z.infer<typeof recommendationPeriodSchema>;
@@ -58,3 +68,5 @@ export type ZodFeedbackToken = z.infer<typeof feedbackTokenSchema>;
 export type ZodFeedbackResponse = z.infer<typeof feedbackResponseSchema>;
 export type ZodAiRecommendation = z.infer<typeof aiRecommendationSchema>;
 export type ZodSubmitFeedback = z.infer<typeof submitFeedbackSchema>;
+
+
