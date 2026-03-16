@@ -30,6 +30,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { EditClient } from "./EditClient";
+import { getErrorMessage } from "@/src/helpers/getErrorMessage";
 
 export function DropdownMenuClient({
   client,
@@ -82,9 +83,7 @@ export function DropdownMenuClient({
       await navigator.clipboard.writeText(feedbackLink);
       toast.success("Ссылка на отзыв скопирована");
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Ошибка отправки ссылки",
-      );
+      toast.error(getErrorMessage(error, "Ошибка отправки ссылки"));
     }
   };
 

@@ -4,6 +4,7 @@ import {
   ZodAppointmentStatus,
   ZodCreateAppointment,
 } from "../schemas/books/bookSchema";
+import { mapSupabaseError } from "@/src/helpers/getErrorMessage";
 
 const supabase = createClient();
 const DEFAULT_CATEGORY = "Без категории";
@@ -50,7 +51,7 @@ export const fetchAppointments = async ({
   const { data, error } = await query;
 
   if (error) {
-    throw error;
+    throw new Error(mapSupabaseError(error));
   }
   if (!data) {
     return [];
@@ -79,7 +80,7 @@ export const addAppointment = async (
       throw new BookingOverlapError();
     }
 
-    throw new Error(error.message);
+    throw new Error(mapSupabaseError(error));
   }
 
   if (!data) {
@@ -99,7 +100,7 @@ export const deleteAppointment = async (
     .select();
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(mapSupabaseError(error));
   }
   if (!data) {
     return [];
@@ -128,7 +129,10 @@ export const updateAppointment = async (
     .single();
 
   if (error) {
-    throw new Error(error.message);
+    if (error.code === "23P01" || error.code === "23505") {
+      throw new BookingOverlapError();
+    }
+    throw new Error(mapSupabaseError(error));
   }
   if (!data) {
     throw new Error("Не удалось обновить запись: пустой ответ от сервера");

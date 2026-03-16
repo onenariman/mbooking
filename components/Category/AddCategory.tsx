@@ -17,6 +17,7 @@ import { Label } from "../ui/label";
 import Link from "next/link";
 import { useAddCategory } from "@/src/hooks/categories.hooks";
 import { formatNameInput } from "@/src/validators/formatNameInput";
+import { getErrorMessage } from "@/src/helpers/getErrorMessage";
 
 const AddCategory = () => {
   const [categoryName, setCategoryName] = useState("");
@@ -46,7 +47,7 @@ const AddCategory = () => {
         },
         onError: (error) => {
           toast.error("Категория не добавлена", {
-            description: `Проверьте соединение с интернетом: ${error.message}`,
+            description: `Проверьте соединение с интернетом: ${getErrorMessage(error)}`,
           });
         },
       },

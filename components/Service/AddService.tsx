@@ -28,6 +28,7 @@ import { useAddService } from "@/src/hooks/services.hook";
 import { toast } from "sonner";
 import Spinner from "../Spinner";
 import { formatPriceInput } from "@/src/validators/formatPriceInput";
+import { getErrorMessage } from "@/src/helpers/getErrorMessage";
 
 const AddService = () => {
   const { data: categories = [] } = useCategories();
@@ -61,7 +62,7 @@ const AddService = () => {
         },
         onError: (error) => {
           toast.error("Услуга не добавлена", {
-            description: `Проверьте соединение с интернетом: ${error.message}`,
+            description: `Проверьте соединение с интернетом: ${getErrorMessage(error)}`,
           });
         },
       },

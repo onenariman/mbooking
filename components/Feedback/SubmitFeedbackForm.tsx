@@ -10,6 +10,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { useSubmitFeedback } from "@/src/hooks/feedback.hooks";
 import Quizle from "@/components/Feedback/Quizle";
+import { getErrorMessage } from "@/src/helpers/getErrorMessage";
 
 interface SubmitFeedbackFormProps {
   token: string;
@@ -69,6 +70,8 @@ const ratingQuestions = [
   },
 ] as const;
 
+const MAX_FEEDBACK_LENGTH = 1000;
+
 type RatingKey = (typeof ratingQuestions)[number]["key"];
 
 const buildInitialRatings = (): Record<RatingKey, number | null> =>
@@ -119,9 +122,9 @@ export default function SubmitFeedbackForm({ token }: SubmitFeedbackFormProps) {
 
       setFeedbackText((prev) => {
         const normalizedPrev = prev.trim();
-        return normalizedPrev.length > 0
-          ? `${normalizedPrev} ${text}`
-          : text;
+        const next =
+          normalizedPrev.length > 0 ? `${normalizedPrev} ${text}` : text;
+        return next.slice(0, MAX_FEEDBACK_LENGTH);
       });
     };
 
@@ -173,7 +176,7 @@ export default function SubmitFeedbackForm({ token }: SubmitFeedbackFormProps) {
       setIsSubmitted(true);
       toast.success("Спасибо, отзыв отправлен");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Ошибка отправки";
+      const message = getErrorMessage(error, "Ошибка отправки");
       if (message.includes("Invalid or expired token")) {
         toast.error("Ссылка уже использована или истекла");
         return;
@@ -234,15 +237,21 @@ export default function SubmitFeedbackForm({ token }: SubmitFeedbackFormProps) {
                 id="feedback-text"
                 placeholder="Опишите, что стоит улучшить в обслуживании..."
                 value={feedbackText}
-                onChange={(event) => setFeedbackText(event.target.value)}
+                onChange={(event) =>
+                  setFeedbackText(event.target.value.slice(0, MAX_FEEDBACK_LENGTH))
+                }
                 className="min-h-32"
                 disabled={isSubmitted}
+                maxLength={MAX_FEEDBACK_LENGTH}
               />
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs text-muted-foreground">
                   {isSpeechSupported
                     ? "Можно надиктовать отзыв голосом"
                     : "Голосовой ввод недоступен в этом браузере"}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {feedbackText.length}/{MAX_FEEDBACK_LENGTH}
                 </span>
                 <Button
                   type="button"

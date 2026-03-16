@@ -8,6 +8,7 @@ import Spinner from "../Spinner";
 
 import { formatNameInput } from "@/src/validators/formatNameInput";
 import { useAddClient } from "@/src/hooks/clients.hooks";
+import { getErrorMessage } from "@/src/helpers/getErrorMessage";
 
 import {
   Card,
@@ -60,7 +61,7 @@ const AddClient = () => {
         },
         onError: (error) => {
           toast.error("Клиент не добавлен", {
-            description: `Проверьте соединение с интернетом: ${error.message}`,
+            description: `Проверьте соединение с интернетом: ${getErrorMessage(error)}`,
           });
         },
       },

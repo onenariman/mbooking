@@ -1,58 +1,65 @@
-import { createClient } from "@/src/utils/supabase/client";
 import { ZodService } from "../schemas/services/serviceSchema";
-
-const supabase = createClient();
 
 type ServiceCreateInput = Pick<ZodService, "name" | "category_id" | "price">;
 type ServiceUpdateInput = Partial<
   Pick<ZodService, "name" | "category_id" | "price">
 >;
 
-export const fetchServices = async () => {
-  const { error, data } = await supabase.from("services").select("*");
-
-  if (error) {
-    throw new Error(error.message);
+export const fetchServices = async (): Promise<ZodService[]> => {
+  const response = await fetch("/api/services", { method: "GET" });
+  const payload = (await response.json()) as { data?: ZodService[]; message?: string };
+  if (!response.ok) {
+    throw new Error(payload.message || "Не удалось загрузить услуги");
   }
-
-  return data;
+  return payload.data ?? [];
 };
 
 export const addService = async (
   service: ServiceCreateInput,
 ): Promise<ZodService> => {
-  const { data, error } = await supabase
-    .from("services")
-    .insert(service)
-    .select()
-    .single();
-
-  if (error) {
-    throw new Error(error.message);
+  const response = await fetch("/api/services", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(service),
+  });
+  const payload = (await response.json()) as { data?: ZodService; message?: string };
+  if (!response.ok) {
+    throw new Error(payload.message || "Не удалось создать услугу");
   }
-
-  return data as ZodService;
+  if (!payload.data) {
+    throw new Error("Ответ сервера не содержит данных");
+  }
+  return payload.data;
 };
 
 export const deleteService = async (id: string) => {
-  const { data, error } = await supabase.from("services").delete().eq("id", id);
-
-  if (error) {
-    throw new Error(error.message);
+  const params = new URLSearchParams({ id });
+  const response = await fetch(`/api/services?${params.toString()}`, {
+    method: "DELETE",
+  });
+  const payload = (await response.json()) as { data?: boolean; message?: string };
+  if (!response.ok) {
+    throw new Error(payload.message || "Не удалось удалить услугу");
   }
-  return data;
+  return payload.data ?? true;
 };
 
 export const updateService = async (
   id: string,
   updates: ServiceUpdateInput,
 ) => {
-  const { error } = await supabase
-    .from("services")
-    .update(updates)
-    .eq("id", id);
-  if (error) {
-    throw new Error(error.message);
+  const params = new URLSearchParams({ id });
+  const response = await fetch(`/api/services?${params.toString()}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(updates),
+  });
+  const payload = (await response.json()) as { data?: ZodService; message?: string };
+  if (!response.ok) {
+    throw new Error(payload.message || "Не удалось обновить услугу");
   }
-  return { id, updates };
+  if (!payload.data) {
+    throw new Error("Ответ сервера не содержит данных");
+  }
+  return { id, updates: payload.data };
 };

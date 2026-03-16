@@ -1,17 +1,10 @@
-﻿import { differenceInCalendarDays, subDays, subMonths } from "date-fns";
-import { createClient } from "@/src/utils/supabase/client";
-import {
+﻿import {
+  recommendationJobSchema,
   ZodAiRecommendation,
+  ZodRecommendationJob,
   ZodRecommendationPeriod,
   ZodSubmitFeedback,
 } from "@/src/schemas/feedback/feedbackSchema";
-
-const supabase = createClient();
-
-type PeriodRange = {
-  from: string;
-  to: string;
-};
 
 export type FeedbackRatingsTrend = {
   key: string;
@@ -23,131 +16,74 @@ export type FeedbackRatingsTrend = {
   prevSampleSize: number;
 };
 
-const toDateOnlyIso = (date: Date) => date.toISOString().slice(0, 10);
-
-export const getPeriodRange = (period: ZodRecommendationPeriod): PeriodRange => {
-  const now = new Date();
-  const to = toDateOnlyIso(now);
-
-  if (period === "week") {
-    return { from: toDateOnlyIso(subDays(now, 7)), to };
-  }
-  if (period === "month") {
-    return { from: toDateOnlyIso(subMonths(now, 1)), to };
-  }
-  if (period === "3m") {
-    return { from: toDateOnlyIso(subMonths(now, 3)), to };
-  }
-  if (period === "6m") {
-    return { from: toDateOnlyIso(subMonths(now, 6)), to };
-  }
-  if (period === "9m") {
-    return { from: toDateOnlyIso(subMonths(now, 9)), to };
-  }
-  if (period === "12m") {
-    return { from: toDateOnlyIso(subMonths(now, 12)), to };
-  }
-
-  return { from: toDateOnlyIso(subMonths(now, 1)), to };
-};
-
-const getCurrentUserId = async (): Promise<string> => {
-  const { data, error } = await supabase.auth.getUser();
-  if (error) {
-    throw new Error(error.message);
-  }
-  const userId = data.user?.id;
-  if (!userId) {
-    throw new Error("Пользователь не авторизован");
-  }
-  return userId;
-};
-
-const getPreviousRange = (range: PeriodRange): PeriodRange => {
-  const fromDate = new Date(`${range.from}T00:00:00.000Z`);
-  const toDate = new Date(`${range.to}T00:00:00.000Z`);
-  const days = Math.max(1, differenceInCalendarDays(toDate, fromDate) + 1);
-  const prevTo = subDays(fromDate, 1);
-  const prevFrom = subDays(prevTo, days - 1);
-
-  return {
-    from: toDateOnlyIso(prevFrom),
-    to: toDateOnlyIso(prevTo),
-  };
-};
-
 export const createFeedbackToken = async (expiresIn = "14 days") => {
-  const { data, error } = await supabase.rpc("create_feedback_token", {
-    p_expires_in: expiresIn,
+  const response = await fetch("/api/feedback/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ expiresIn }),
   });
-
-  if (error) {
-    throw new Error(error.message);
+  const payload = (await response.json()) as { data?: string; message?: string };
+  if (!response.ok) {
+    throw new Error(payload.message || "РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕР·РґР°С‚СЊ С‚РѕРєРµРЅ");
   }
-
-  return data as string;
+  if (!payload.data) {
+    throw new Error("РћС‚РІРµС‚ СЃРµСЂРІРµСЂР° РЅРµ СЃРѕРґРµСЂР¶РёС‚ РґР°РЅРЅС‹С…");
+  }
+  return payload.data;
 };
 
 export const submitFeedback = async (payload: ZodSubmitFeedback) => {
-  const { data, error } = await supabase.rpc("submit_feedback", {
-    p_token: payload.token,
-    p_feedback_text: payload.feedback_text,
-    p_score_result: payload.score_result,
-    p_score_explanation: payload.score_explanation,
-    p_score_comfort: payload.score_comfort,
-    p_score_booking: payload.score_booking,
-    p_score_recommendation: payload.score_recommendation,
+  const response = await fetch("/api/feedback/submit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
   });
-
-  if (error) {
-    throw new Error(error.message);
+  const responsePayload = (await response.json()) as {
+    data?: string;
+    message?: string;
+  };
+  if (!response.ok) {
+    throw new Error(responsePayload.message || "РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ РѕС‚Р·С‹РІ");
   }
-
-  return data as string;
+  if (!responsePayload.data) {
+    throw new Error("РћС‚РІРµС‚ СЃРµСЂРІРµСЂР° РЅРµ СЃРѕРґРµСЂР¶РёС‚ РґР°РЅРЅС‹С…");
+  }
+  return responsePayload.data;
 };
 
 export const fetchRecommendations = async (
   period: ZodRecommendationPeriod,
 ): Promise<ZodAiRecommendation[]> => {
-  const userId = await getCurrentUserId();
-  const range = getPeriodRange(period);
-
-  const { data, error } = await supabase
-    .from("ai_recommendations")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("period_type", period)
-    .gte("period_from", range.from)
-    .lte("period_to", range.to)
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    throw new Error(error.message);
+  const params = new URLSearchParams({ period });
+  const response = await fetch(`/api/recommendations?${params.toString()}`, {
+    method: "GET",
+  });
+  const payload = (await response.json()) as {
+    data?: ZodAiRecommendation[];
+    message?: string;
+  };
+  if (!response.ok) {
+    throw new Error(payload.message || "РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ СЂРµРєРѕРјРµРЅРґР°С†РёРё");
   }
-
-  return (data ?? []) as ZodAiRecommendation[];
+  return payload.data ?? [];
 };
 
 export const fetchRecommendationsByRange = async (
   from: string,
   to: string,
 ): Promise<ZodAiRecommendation[]> => {
-  const userId = await getCurrentUserId();
-
-  const { data, error } = await supabase
-    .from("ai_recommendations")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("period_type", "custom")
-    .eq("period_from", from)
-    .eq("period_to", to)
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    throw new Error(error.message);
+  const params = new URLSearchParams({ from, to });
+  const response = await fetch(`/api/recommendations?${params.toString()}`, {
+    method: "GET",
+  });
+  const payload = (await response.json()) as {
+    data?: ZodAiRecommendation[];
+    message?: string;
+  };
+  if (!response.ok) {
+    throw new Error(payload.message || "РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ СЂРµРєРѕРјРµРЅРґР°С†РёРё");
   }
-
-  return (data ?? []) as ZodAiRecommendation[];
+  return payload.data ?? [];
 };
 
 export type FeedbackResponseItem = {
@@ -164,139 +100,63 @@ export type FeedbackResponseItem = {
 export const fetchFeedbackResponses = async (
   period: ZodRecommendationPeriod,
 ): Promise<FeedbackResponseItem[]> => {
-  const userId = await getCurrentUserId();
-  const range = getPeriodRange(period);
-
-  const { data, error } = await supabase
-    .from("feedback_responses")
-    .select(
-      "id, user_id, feedback_text, created_at, period_bucket, score_result, score_explanation, score_comfort, score_booking, score_recommendation",
-    )
-    .eq("user_id", userId)
-    .gte("created_at", `${range.from}T00:00:00.000Z`)
-    .lte("created_at", `${range.to}T23:59:59.999Z`)
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    throw new Error(error.message);
+  const params = new URLSearchParams({ period });
+  const response = await fetch(`/api/feedback/responses?${params.toString()}`, {
+    method: "GET",
+  });
+  const payload = (await response.json()) as {
+    data?: FeedbackResponseItem[];
+    message?: string;
+  };
+  if (!response.ok) {
+    throw new Error(payload.message || "РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РѕС‚Р·С‹РІС‹");
   }
-
-  return (data ?? []) as FeedbackResponseItem[];
+  return payload.data ?? [];
 };
 
-export const deleteRecommendation = async (recommendationId: string): Promise<void> => {
-  const userId = await getCurrentUserId();
-
-  const { error } = await supabase
-    .from("ai_recommendations")
-    .delete()
-    .eq("id", recommendationId)
-    .eq("user_id", userId);
-
-  if (error) {
-    throw new Error(error.message);
+export const deleteRecommendation = async (
+  recommendationId: string,
+): Promise<void> => {
+  const params = new URLSearchParams({ id: recommendationId });
+  const response = await fetch(`/api/recommendations?${params.toString()}`, {
+    method: "DELETE",
+  });
+  const payload = (await response.json()) as { data?: boolean; message?: string };
+  if (!response.ok) {
+    throw new Error(payload.message || "РќРµ СѓРґР°Р»РѕСЃСЊ СѓРґР°Р»РёС‚СЊ СЂРµРєРѕРјРµРЅРґР°С†РёСЋ");
   }
-};
-
-
-type RatingsRow = {
-  score_result: number | null;
-  score_explanation: number | null;
-  score_comfort: number | null;
-  score_booking: number | null;
-  score_recommendation: number | null;
-};
-
-const fetchScoresForRange = async (
-  userId: string,
-  range: PeriodRange,
-): Promise<RatingsRow[]> => {
-  const { data, error } = await supabase
-    .from("feedback_responses")
-    .select(
-      "score_result, score_explanation, score_comfort, score_booking, score_recommendation",
-    )
-    .eq("user_id", userId)
-    .gte("created_at", `${range.from}T00:00:00.000Z`)
-    .lte("created_at", `${range.to}T23:59:59.999Z`);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return (data ?? []) as RatingsRow[];
-};
-
-const calcAverage = (rows: RatingsRow[], key: keyof RatingsRow) => {
-  const values = rows
-    .map((row) => row[key])
-    .filter((value): value is number => Number.isFinite(value));
-
-  if (!values.length) {
-    return { avg: null, count: 0 };
-  }
-
-  const avg = values.reduce((sum, value) => sum + value, 0) / values.length;
-  const rounded = Math.round(avg * 10) / 10;
-  return { avg: rounded, count: values.length };
 };
 
 export const fetchFeedbackRatingsTrend = async (
   period: ZodRecommendationPeriod,
 ): Promise<FeedbackRatingsTrend[]> => {
-  const userId = await getCurrentUserId();
-  const range = getPeriodRange(period);
-  const prevRange = getPreviousRange(range);
-
-  const [currentRows, prevRows] = await Promise.all([
-    fetchScoresForRange(userId, range),
-    fetchScoresForRange(userId, prevRange),
-  ]);
-
-  const keys = [
-    "score_result",
-    "score_explanation",
-    "score_comfort",
-    "score_booking",
-    "score_recommendation",
-  ] as const;
-
-  const labels: Record<(typeof keys)[number], string> = {
-    score_result: "Результат процедуры",
-    score_explanation: "Объяснения мастера",
-    score_comfort: "Комфорт процедуры",
-    score_booking: "Удобство записи",
-    score_recommendation: "Готовность рекомендовать",
-  };
-
-  return keys.map((key) => {
-    const current = calcAverage(currentRows, key);
-    const previous = calcAverage(prevRows, key);
-
-    const delta =
-      current.avg !== null && previous.avg !== null
-        ? Math.round((current.avg - previous.avg) * 10) / 10
-        : null;
-
-    const percent =
-      current.avg !== null ? Math.round((current.avg / 5) * 100) : null;
-
-    return {
-      key,
-      label: labels[key],
-      avg: current.avg,
-      percent,
-      delta,
-      sampleSize: current.count,
-      prevSampleSize: previous.count,
-    };
+  const params = new URLSearchParams({ period });
+  const response = await fetch(`/api/feedback/ratings?${params.toString()}`, {
+    method: "GET",
   });
+  const payload = (await response.json()) as {
+    data?: FeedbackRatingsTrend[];
+    message?: string;
+  };
+  if (!response.ok) {
+    throw new Error(payload.message || "РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РѕС†РµРЅРєРё");
+  }
+  return payload.data ?? [];
 };
+
+const parseRecommendationJob = (payload: unknown): ZodRecommendationJob => {
+  const parsed = recommendationJobSchema.safeParse(payload);
+  if (!parsed.success) {
+    throw new Error("РћС‚РІРµС‚ СЃРµСЂРІРµСЂР° РЅРµ СЃРѕРґРµСЂР¶РёС‚ РєРѕСЂСЂРµРєС‚РЅС‹С… РґР°РЅРЅС‹С…");
+  }
+  return parsed.data;
+};
+
 class InsufficientFeedbackError extends Error {
   code = "INSUFFICIENT_FEEDBACK" as const;
 
   constructor() {
-    super("Недостаточно отзывов для рекомендаций");
+    super("РќРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ РѕС‚Р·С‹РІРѕРІ РґР»СЏ СЂРµРєРѕРјРµРЅРґР°С†РёР№");
     this.name = "InsufficientFeedbackError";
   }
 }
@@ -307,10 +167,10 @@ export type GenerateRecommendationsPayload =
   | { period: ZodRecommendationPeriod }
   | { from: string; to: string };
 
-export const generateRecommendations = async (
+export const createRecommendationJob = async (
   payload: GenerateRecommendationsPayload,
-): Promise<ZodAiRecommendation> => {
-  const response = await fetch("/api/recommendations/generate", {
+): Promise<ZodRecommendationJob> => {
+  const response = await fetch("/api/recommendations/jobs", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -319,30 +179,96 @@ export const generateRecommendations = async (
   });
 
   const responsePayload = (await response.json()) as {
-    code?: string;
     message?: string;
-    data?: ZodAiRecommendation;
+    data?: ZodRecommendationJob;
   };
 
   if (!response.ok) {
-    if (responsePayload.code === "INSUFFICIENT_FEEDBACK") {
-      throw new InsufficientFeedbackError();
-    }
-
-    throw new Error(responsePayload.message || "Ошибка генерации рекомендаций");
+    throw new Error(responsePayload.message || "РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕР·РґР°С‚СЊ Р·Р°РґР°С‡Сѓ");
   }
 
   if (!responsePayload.data) {
-    throw new Error("Ответ сервера не содержит данных");
+    throw new Error("РћС‚РІРµС‚ СЃРµСЂРІРµСЂР° РЅРµ СЃРѕРґРµСЂР¶РёС‚ РґР°РЅРЅС‹С…");
   }
 
-  return responsePayload.data;
+  return parseRecommendationJob(responsePayload.data);
 };
 
+export const fetchRecommendationJob = async (
+  jobId: string,
+): Promise<ZodRecommendationJob> => {
+  const response = await fetch(`/api/recommendations/jobs/${jobId}`, {
+    method: "GET",
+  });
 
+  const responsePayload = (await response.json()) as {
+    message?: string;
+    data?: ZodRecommendationJob;
+  };
 
+  if (!response.ok) {
+    throw new Error(responsePayload.message || "РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ Р·Р°РґР°С‡Сѓ");
+  }
 
+  if (!responsePayload.data) {
+    throw new Error("РћС‚РІРµС‚ СЃРµСЂРІРµСЂР° РЅРµ СЃРѕРґРµСЂР¶РёС‚ РґР°РЅРЅС‹С…");
+  }
 
+  return parseRecommendationJob(responsePayload.data);
+};
+
+export const runRecommendationJob = async (
+  jobId: string,
+): Promise<ZodRecommendationJob> => {
+  const response = await fetch(`/api/recommendations/jobs/${jobId}/run`, {
+    method: "POST",
+  });
+
+  const responsePayload = (await response.json()) as {
+    message?: string;
+    data?: ZodRecommendationJob;
+  };
+
+  if (!response.ok) {
+    throw new Error(responsePayload.message || "РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РїСѓСЃС‚РёС‚СЊ Р·Р°РґР°С‡Сѓ");
+  }
+
+  if (!responsePayload.data) {
+    throw new Error("РћС‚РІРµС‚ СЃРµСЂРІРµСЂР° РЅРµ СЃРѕРґРµСЂР¶РёС‚ РґР°РЅРЅС‹С…");
+  }
+
+  return parseRecommendationJob(responsePayload.data);
+};
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export const waitForRecommendationJob = async (
+  jobId: string,
+  options?: { timeoutMs?: number; intervalMs?: number },
+): Promise<ZodRecommendationJob> => {
+  const timeoutMs = options?.timeoutMs ?? 240_000;
+  const intervalMs = options?.intervalMs ?? 2_000;
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const job = await fetchRecommendationJob(jobId);
+    if (job.status === "succeeded") {
+      return job;
+    }
+    if (job.status === "failed") {
+      if (job.error_code === "INSUFFICIENT_FEEDBACK") {
+        throw new InsufficientFeedbackError();
+      }
+      throw new Error(job.error_message || "РћС€РёР±РєР° РіРµРЅРµСЂР°С†РёРё СЂРµРєРѕРјРµРЅРґР°С†РёР№");
+    }
+    await wait(intervalMs);
+  }
+
+  throw new Error("РџСЂРµРІС‹С€РµРЅРѕ РІСЂРµРјСЏ РѕР¶РёРґР°РЅРёСЏ РіРµРЅРµСЂР°С†РёРё");
+};
+export const generateRecommendations = async (
+  payload: GenerateRecommendationsPayload,
+): Promise<ZodRecommendationJob> => createRecommendationJob(payload);
 
 
 

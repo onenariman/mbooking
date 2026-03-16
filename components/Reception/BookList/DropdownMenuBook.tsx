@@ -44,6 +44,7 @@ import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { DeleteBook } from "./DeleteBook";
 import { EditBook } from "./EditBook";
+import { getErrorMessage } from "@/src/helpers/getErrorMessage";
 
 interface DropdownMenuBookProps {
   book: ZodAppointment;
@@ -153,7 +154,7 @@ export default function DropdownMenuBook({ book }: DropdownMenuBookProps) {
       await navigator.clipboard.writeText(feedbackLink);
       toast.success("Ссылка на отзыв скопирована");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Ошибка отправки ссылки");
+      toast.error(getErrorMessage(error, "Ошибка отправки ссылки"));
     }
   };
 

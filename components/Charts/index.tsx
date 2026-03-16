@@ -1,9 +1,8 @@
-﻿"use client";
+"use client";
 
 import { useMemo, useState } from "react";
 import type { DateRange } from "react-day-picker";
-import { useAppointments } from "@/src/hooks/appointments.hooks";
-import { useClients } from "@/src/hooks/clients.hooks";
+import { useQuery } from "@tanstack/react-query";
 import {
   Card,
   CardDescription,
@@ -16,20 +15,23 @@ import RevenueByServiceChart from "./charts/RevenueByServiceChart";
 import CategoryFilter from "./filters/CategoryFilter";
 import DateRangeFilter from "./filters/DateRangeFilter";
 import {
-  buildAppointmentsByDay,
-  buildCategoriesSummary,
   buildDateFilter,
-  buildRevenueLossMetrics,
-  buildRevenueByService,
-  buildStatusSummary,
-  calculateMetrics,
-  normalizeCategoryName,
 } from "./lib/analytics";
 import { getDefaultRange } from "./lib/constants";
 import MetricsCards from "./metrics/MetricsCards";
 import CategoriesSummary from "./summary/CategoriesSummary";
 import RevenueLossCard from "./summary/RevenueLossCard";
 import StatusSummary from "./summary/StatusSummary";
+import type {
+  AppointmentsByDayPoint,
+  CategorySummaryRow,
+  DateFilter,
+  Metrics,
+  RevenueByServicePoint,
+  RevenueLossMetrics,
+  StatusSummaryItem,
+} from "./lib/types";
+import { QUERY_OPTIONS } from "@/src/lib/queryConfig";
 
 export default function ChartsSection() {
   const [range, setRange] = useState<DateRange | undefined>(() =>
@@ -38,87 +40,63 @@ export default function ChartsSection() {
   const [selectedCategory, setSelectedCategory] = useState("all");
 
   const dateFilter = useMemo(() => buildDateFilter(range), [range]);
-  const { data: appointments = [], isLoading: isAppointmentsLoading } =
-    useAppointments(dateFilter);
-  const { data: clients = [], isLoading: isClientsLoading } = useClients();
 
   const hasSelectedRange = Boolean(range?.from);
 
-  const categoryOptions = useMemo(() => {
-    const categories = Array.from(
-      new Set(
-        appointments.map((item) => normalizeCategoryName(item.category_name)),
-      ),
-    ).sort((a, b) => a.localeCompare(b, "ru"));
+  type ChartsOverviewResponse = {
+    data: {
+      dateFilter: DateFilter;
+      categoryOptions: string[];
+      activeCategory: string;
+      overallMetrics: Metrics;
+      selectedMetrics: Metrics;
+      appointmentsByDay: AppointmentsByDayPoint[];
+      revenueByService: RevenueByServicePoint[];
+      statusSummary: StatusSummaryItem[];
+      categoriesSummary: CategorySummaryRow[];
+      revenueLossMetrics: RevenueLossMetrics;
+    };
+  };
 
-    return ["all", ...categories];
-  }, [appointments]);
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["charts-overview", dateFilter.from, dateFilter.to, selectedCategory],
+    queryFn: async (): Promise<ChartsOverviewResponse["data"]> => {
+      const params = new URLSearchParams();
+      if (dateFilter.from) params.set("from", dateFilter.from);
+      if (dateFilter.to) params.set("to", dateFilter.to);
+      params.set("category", selectedCategory);
 
-  const activeCategory = categoryOptions.includes(selectedCategory)
-    ? selectedCategory
-    : "all";
+      const response = await fetch(`/api/charts/overview?${params.toString()}`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
 
-  const selectedAppointments = useMemo(() => {
-    if (activeCategory === "all") {
-      return appointments;
-    }
+      const payload = (await response.json()) as { data?: ChartsOverviewResponse["data"]; message?: string };
+      if (!response.ok) {
+        throw new Error(payload.message || "Не удалось загрузить аналитику");
+      }
+      if (!payload.data) {
+        throw new Error("Ответ сервера не содержит данных");
+      }
+      return payload.data;
+    },
+    ...QUERY_OPTIONS.analytics,
+  });
 
-    return appointments.filter(
-      (item) => normalizeCategoryName(item.category_name) === activeCategory,
-    );
-  }, [appointments, activeCategory]);
-
-  const overallMetrics = useMemo(
-    () => calculateMetrics(appointments, clients, dateFilter, false),
-    [appointments, clients, dateFilter],
-  );
-
-  const selectedMetrics = useMemo(
-    () =>
-      calculateMetrics(
-        selectedAppointments,
-        clients,
-        dateFilter,
-        activeCategory !== "all",
-      ),
-    [selectedAppointments, clients, dateFilter, activeCategory],
-  );
-
-  const appointmentsByDay = useMemo(
-    () => buildAppointmentsByDay(selectedAppointments),
-    [selectedAppointments],
-  );
-
-  const revenueByService = useMemo(
-    () => buildRevenueByService(selectedAppointments),
-    [selectedAppointments],
-  );
-
-  const statusSummary = useMemo(
-    () => buildStatusSummary(selectedMetrics),
-    [selectedMetrics],
-  );
-
-  const categoriesSummary = useMemo(
-    () =>
-      buildCategoriesSummary(
-        appointments,
-        clients,
-        dateFilter,
-        overallMetrics.revenue,
-      ),
-    [appointments, clients, dateFilter, overallMetrics.revenue],
-  );
-
-  const revenueLossMetrics = useMemo(
-    () => buildRevenueLossMetrics(selectedAppointments),
-    [selectedAppointments],
-  );
+  const categoryOptions = data?.categoryOptions ?? ["all"];
+  const activeCategory = data?.activeCategory ?? "all";
+  const overallMetrics = data?.overallMetrics;
+  const selectedMetrics = data?.selectedMetrics;
+  const appointmentsByDay = data?.appointmentsByDay ?? [];
+  const revenueByService = data?.revenueByService ?? [];
+  const statusSummary = data?.statusSummary ?? [];
+  const categoriesSummary = data?.categoriesSummary ?? [];
+  const revenueLossMetrics = data?.revenueLossMetrics;
 
   const categoryLabel =
     activeCategory === "all" ? "все категории" : activeCategory;
 
-  if (isAppointmentsLoading || isClientsLoading) {
+  if (isLoading) {
     return (
       <div className="grid gap-4">
         <Skeleton className="h-10 w-72" />
@@ -132,6 +110,19 @@ export default function ChartsSection() {
           <Skeleton className="h-80 w-full rounded-2xl" />
         </div>
       </div>
+    );
+  }
+
+  if (isError || !overallMetrics || !selectedMetrics || !revenueLossMetrics) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Статистика</CardTitle>
+          <CardDescription>
+            Не удалось загрузить аналитику. Попробуйте обновить страницу.
+          </CardDescription>
+        </CardHeader>
+      </Card>
     );
   }
 

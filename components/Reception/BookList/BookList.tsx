@@ -14,6 +14,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { useAppointments } from "@/src/hooks/appointments.hooks";
 import ItemBook from "./ItemBook";
+import { getErrorMessage } from "@/src/helpers/getErrorMessage";
 
 interface BookListProps {
   from: string | null;
@@ -65,9 +66,7 @@ export default function BookList({
             Не удалось загрузить данные
           </p>
           <p className="text-xs text-muted-foreground">
-            {error instanceof Error
-              ? error.message
-              : "Произошла неизвестная ошибка"}
+            {getErrorMessage(error, "Произошла неизвестная ошибка")}
           </p>
         </div>
         <Button

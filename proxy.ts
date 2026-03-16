@@ -11,6 +11,6 @@ export const config = {
      * Run auth proxy only for application routes.
      * Skip Next internals and static assets to avoid auth calls on HMR/chunks in dev.
      */
-    "/((?!_next/|favicon.ico|.*\\..*).*)",
+    "/((?!api|_next/|favicon.ico|.*\\..*).*)",
   ],
 };

@@ -15,12 +15,38 @@ export const percentFormatter = new Intl.NumberFormat("ru-RU", {
   maximumFractionDigits: 1,
 });
 
+export const statusLabelsFull: Record<StatusKey, string> = {
+  booked: "Запланировано",
+  completed: "Завершено",
+  cancelled: "Отменено",
+  no_show: "Не пришли",
+};
+
 export const statusLabels: Record<StatusKey, string> = {
   booked: "Запланировано",
   completed: "Завершено",
   cancelled: "Отменено",
   no_show: "Не пришли",
 };
+
+export const statusChartConfig = {
+  booked: {
+    label: statusLabels.booked,
+    color: "var(--chart-1)",
+  },
+  completed: {
+    label: statusLabels.completed,
+    color: "var(--chart-2)",
+  },
+  cancelled: {
+    label: statusLabels.cancelled,
+    color: "var(--chart-4)",
+  },
+  no_show: {
+    label: statusLabels.no_show,
+    color: "var(--chart-5)",
+  },
+} satisfies ChartConfig;
 
 export const appointmentsChartConfig = {
   appointments: {

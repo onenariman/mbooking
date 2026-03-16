@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,8 @@ import { ZodAppointment } from "@/src/schemas/books/bookSchema";
 import { useUpdateAppointment } from "@/src/hooks/appointments.hooks";
 import { formatPriceInput } from "@/src/validators/formatPriceInput";
 import { Spinner } from "@/components/ui/spinner";
+import { BookingOverlapError } from "@/src/api/receptions.api";
+import { getErrorMessage } from "@/src/helpers/getErrorMessage";
 import DateBook from "../AddBook/DateBook";
 
 export function EditBook({
@@ -58,10 +60,14 @@ export function EditBook({
           appointment_end: appointmentEnd ?? undefined,
         },
       });
-      toast.success("Запись обновлена");
+      toast.success("Р—Р°РїРёСЃСЊ РѕР±РЅРѕРІР»РµРЅР°");
       onOpenChange(false);
-    } catch {
-      toast.error("Ошибка при сохранении");
+    } catch (error) {
+      if (error instanceof BookingOverlapError) {
+        toast.error("Р­С‚РѕС‚ СЃР»РѕС‚ СѓР¶Рµ Р·Р°РЅСЏС‚. Р’С‹Р±РµСЂРёС‚Рµ РґСЂСѓРіРѕРµ РІСЂРµРјСЏ");
+        return;
+      }
+      toast.error(getErrorMessage(error, "РћС€РёР±РєР° РїСЂРё СЃРѕС…СЂР°РЅРµРЅРёРё"));
     }
   };
 
@@ -69,9 +75,9 @@ export function EditBook({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="top" className="overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Изменить запись</SheetTitle>
+          <SheetTitle>РР·РјРµРЅРёС‚СЊ Р·Р°РїРёСЃСЊ</SheetTitle>
           <SheetDescription>
-            Клиент: {book.client_name} ({book.service_name})
+            РљР»РёРµРЅС‚: {book.client_name} ({book.service_name})
           </SheetDescription>
         </SheetHeader>
 
@@ -86,19 +92,19 @@ export function EditBook({
           />
 
           <div className="space-y-2">
-            <Label>Стоимость</Label>
+            <Label>РЎС‚РѕРёРјРѕСЃС‚СЊ</Label>
             <Input
               value={amount ?? ""}
               onChange={(e) => {
                 const formatted = formatPriceInput(e.target.value);
-                const numeric = formatted.replace(/\s/g, "");
+                const numeric = formatted.replace(/\\s/g, "");
                 setAmount(numeric ? Number(numeric) : null);
               }}
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Комментарий</Label>
+            <Label>РљРѕРјРјРµРЅС‚Р°СЂРёР№</Label>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -112,17 +118,19 @@ export function EditBook({
             disabled={isPending || isRangeInvalid}
             className="w-full"
           >
-            {isPending ? <Spinner className="mr-2" /> : "Сохранить изменения"}
+            {isPending ? <Spinner className="mr-2" /> : "РЎРѕС…СЂР°РЅРёС‚СЊ РёР·РјРµРЅРµРЅРёСЏ"}
           </Button>
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
             className="w-full"
           >
-            Отмена
+            РћС‚РјРµРЅР°
           </Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>
   );
 }
+
+

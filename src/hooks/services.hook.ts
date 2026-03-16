@@ -10,6 +10,7 @@ import {
   serviceSchema,
   ZodService,
 } from "../schemas/services/serviceSchema";
+import { QUERY_OPTIONS } from "@/src/lib/queryConfig";
 
 const SERVICES_QUERY_KEY = ["services"] as const;
 
@@ -35,8 +36,7 @@ export const useServices = () => {
 
       return result.data;
     },
-    staleTime: Infinity,
-    refetchOnWindowFocus: false,
+    ...QUERY_OPTIONS.reference,
   });
 };
 

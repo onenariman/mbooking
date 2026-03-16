@@ -10,6 +10,7 @@ import {
   categorySchema,
   ZodCategory,
 } from "../schemas/categories/categorySchema";
+import { QUERY_OPTIONS } from "@/src/lib/queryConfig";
 
 const CATEGORIES_QUERY_KEY = ["categories"] as const;
 
@@ -35,8 +36,7 @@ export const useCategories = () => {
 
       return result.data;
     },
-    staleTime: Infinity,
-    refetchOnWindowFocus: false,
+    ...QUERY_OPTIONS.reference,
   });
 };
 

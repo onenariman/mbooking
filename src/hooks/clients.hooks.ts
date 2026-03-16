@@ -7,9 +7,10 @@ import {
 } from "../api/clients.api";
 import {
   ClientArraySchema,
-  clientSchema,
+  clientInputSchema,
   ZodClient,
 } from "../schemas/clients/clientSchema";
+import { QUERY_OPTIONS } from "@/src/lib/queryConfig";
 
 const CLIENTS_QUERY_KEY = ["clients"] as const;
 
@@ -35,8 +36,7 @@ export const useClients = () => {
 
       return result.data;
     },
-    staleTime: Infinity,
-    refetchOnWindowFocus: false,
+    ...QUERY_OPTIONS.reference,
   });
 };
 
@@ -45,7 +45,7 @@ export const useAddClient = () => {
 
   return useMutation({
     mutationFn: async (client: ClientCreateInput): Promise<ZodClient> => {
-      const result = clientSchema.pick({ name: true, phone: true }).safeParse(client);
+      const result = clientInputSchema.safeParse(client);
 
       if (!result.success) {
         const message = result.error.issues.map((issue) => issue.message).join(", ");

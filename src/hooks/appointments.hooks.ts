@@ -10,6 +10,7 @@ import {
   createAppointmentSchema,
   ZodAppointment,
 } from "../schemas/books/bookSchema";
+import { QUERY_OPTIONS } from "@/src/lib/queryConfig";
 
 const APPOINTMENTS_QUERY_KEY = ["appointments"] as const;
 
@@ -43,8 +44,7 @@ export const useAppointments = (filter?: DateFilter) => {
 
       return result.data;
     },
-    staleTime: 1000 * 60 * 5,
-    refetchOnWindowFocus: false,
+    ...QUERY_OPTIONS.live,
   });
 };
 

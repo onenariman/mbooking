@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   createFeedbackToken,
   deleteRecommendation,
@@ -19,6 +19,7 @@ import {
   ZodRecommendationPeriod,
   ZodSubmitFeedback,
 } from "@/src/schemas/feedback/feedbackSchema";
+import { QUERY_OPTIONS } from "@/src/lib/queryConfig";
 
 const RECOMMENDATIONS_QUERY_KEY = ["ai-recommendations"] as const;
 const RATINGS_QUERY_KEY = ["feedback-ratings"] as const;
@@ -37,8 +38,7 @@ export const useRecommendations = (period: ZodRecommendationPeriod) => {
       }
       return parsed.data;
     },
-    staleTime: 1000 * 60,
-    refetchOnWindowFocus: false,
+    ...QUERY_OPTIONS.recommendations,
   });
 };
 
@@ -46,8 +46,7 @@ export const useFeedbackRatingsTrend = (period: ZodRecommendationPeriod) => {
   return useQuery({
     queryKey: [...RATINGS_QUERY_KEY, period],
     queryFn: () => fetchFeedbackRatingsTrend(period),
-    staleTime: 1000 * 60,
-    refetchOnWindowFocus: false,
+    ...QUERY_OPTIONS.feedback,
   });
 };
 
@@ -63,8 +62,7 @@ export const useFeedbackResponses = (period: ZodRecommendationPeriod) => {
       }
       return parsed.data;
     },
-    staleTime: 1000 * 60,
-    refetchOnWindowFocus: false,
+    ...QUERY_OPTIONS.feedback,
   });
 };
 
@@ -84,8 +82,7 @@ export const useRecommendationsByRange = (from: string | null, to: string | null
       return parsed.data;
     },
     enabled: Boolean(from && to),
-    staleTime: 1000 * 60,
-    refetchOnWindowFocus: false,
+    ...QUERY_OPTIONS.recommendations,
   });
 };
 
@@ -108,22 +105,9 @@ export const useSubmitFeedback = () => {
 };
 
 export const useGenerateRecommendations = () => {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: (payload: GenerateRecommendationsPayload) =>
       generateRecommendations(payload),
-    onSuccess: (_data, payload) => {
-      if ("period" in payload) {
-        queryClient.invalidateQueries({
-          queryKey: [...RECOMMENDATIONS_QUERY_KEY, payload.period],
-        });
-        return;
-      }
-      queryClient.invalidateQueries({
-        queryKey: RANGE_RECOMMENDATIONS_QUERY_KEY,
-      });
-    },
   });
 };
 

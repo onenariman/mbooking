@@ -13,6 +13,7 @@ import {
   ZodAppointmentStatus,
 } from "@/src/schemas/books/bookSchema";
 import { formatPriceInput } from "@/src/validators/formatPriceInput";
+import { getErrorMessage } from "@/src/helpers/getErrorMessage";
 import DateBook from "./DateBook";
 import SearchClient from "./SearchClient";
 import SearchService from "./SearchService";
@@ -148,7 +149,7 @@ export default function AddBook() {
           return;
         }
 
-        toast.error(error instanceof Error ? error.message : "Ошибка");
+        toast.error(getErrorMessage(error, "Ошибка"));
       },
     });
   };
