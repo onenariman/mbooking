@@ -1,6 +1,10 @@
 "use client";
 
+import { startOfWeek } from "date-fns";
 import { useMemo, useState } from "react";
+import type { DateRange } from "react-day-picker";
+import DateRangeFilter from "@/components/Charts/filters/DateRangeFilter";
+import { getRangeLabel } from "@/components/Charts/lib/constants";
 import {
   Card,
   CardContent,
@@ -8,66 +12,92 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { useFeedbackRatingsTrend } from "@/src/hooks/feedback.hooks";
-import { ZodRecommendationPeriod } from "@/src/schemas/feedback/feedbackSchema";
 import FeedbackRatingsChart from "./FeedbackRatingsChart";
 import RecommendationsBreadcrumb from "./RecommendationsBreadcrumb";
 
-type PeriodOption = {
-  value: ZodRecommendationPeriod;
-  label: string;
+const toDateOnlyIso = (date: Date) => date.toISOString().slice(0, 10);
+type DefinedDateRange = { from: Date; to: Date };
+
+const getCurrentWeekRange = (): DefinedDateRange => {
+  const now = new Date();
+  return {
+    from: startOfWeek(now, { weekStartsOn: 1 }),
+    to: now,
+  };
 };
 
-const periodOptions: PeriodOption[] = [
-  { value: "week", label: "Неделя" },
-  { value: "month", label: "Месяц" },
-  { value: "3m", label: "3 месяца" },
-  { value: "6m", label: "6 месяцев" },
-  { value: "9m", label: "9 месяцев" },
-  { value: "12m", label: "12 месяцев" },
-];
+const hasDefinedRange = (
+  range: DateRange | undefined,
+): range is DefinedDateRange => Boolean(range?.from && range?.to);
+
+const isSameRange = (left: DateRange | undefined, right: DefinedDateRange) => {
+  if (!hasDefinedRange(left)) {
+    return false;
+  }
+
+  return (
+    toDateOnlyIso(left.from) === toDateOnlyIso(right.from) &&
+    toDateOnlyIso(left.to) === toDateOnlyIso(right.to)
+  );
+};
 
 export default function RatingsSection() {
-  const [period, setPeriod] = useState<ZodRecommendationPeriod>("month");
-  const { data: ratings = [], isLoading } = useFeedbackRatingsTrend(period);
+  const [range, setRange] = useState<DateRange | undefined>(getCurrentWeekRange());
 
-  const periodLabel = useMemo(
-    () => periodOptions.find((option) => option.value === period)?.label ?? period,
-    [period],
+  const currentWeekRange = useMemo(() => getCurrentWeekRange(), []);
+  const hasRange = Boolean(range?.from && range?.to);
+  const isCurrentWeekSelected = useMemo(
+    () => isSameRange(range, currentWeekRange),
+    [currentWeekRange, range],
   );
 
-  const handlePeriodChange = (value: string) => {
-    if (periodOptions.some((option) => option.value === value)) {
-      setPeriod(value as ZodRecommendationPeriod);
+  const rangeLabel = getRangeLabel(range);
+  const periodLabel = isCurrentWeekSelected ? "Текущая неделя" : rangeLabel;
+
+  const rangeKey = useMemo(() => {
+    if (!hasDefinedRange(range)) {
+      return null;
     }
-  };
+
+    return {
+      from: toDateOnlyIso(range.from),
+      to: toDateOnlyIso(range.to),
+    };
+  }, [range]);
+
+  const { data: ratings = [], isLoading } = useFeedbackRatingsTrend(
+    rangeKey?.from ?? null,
+    rangeKey?.to ?? null,
+  );
 
   return (
     <div className="flex flex-col gap-4 pb-8">
       <RecommendationsBreadcrumb current="Рейтинг по оценкам" />
+
       <Card>
         <CardHeader>
           <CardTitle>Рейтинг по оценкам</CardTitle>
           <CardDescription>
-            Сравнение среднего рейтинга по вопросам за выбранный период.
+            Сводка по оценкам за текущую неделю или выбранный диапазон.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-muted-foreground">Период:</span>
-          <Tabs value={period} onValueChange={handlePeriodChange}>
-            <TabsList className="flex flex-wrap gap-2 h-auto bg-transparent p-0">
-              {periodOptions.map((option) => (
-                <TabsTrigger
-                  key={option.value}
-                  value={option.value}
-                  className="h-8 px-3 text-xs"
-                >
-                  {option.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+          <span className="text-sm text-muted-foreground">Фильтр:</span>
+          <Button
+            variant={isCurrentWeekSelected ? "default" : "secondary"}
+            onClick={() => setRange(getCurrentWeekRange())}
+          >
+            Текущая неделя
+          </Button>
+          <DateRangeFilter
+            range={range}
+            onChange={setRange}
+            onResetToCurrentMonth={() => setRange(getCurrentWeekRange())}
+            hasSelectedRange={hasRange}
+            showSecondaryAction={false}
+          />
         </CardContent>
       </Card>
 

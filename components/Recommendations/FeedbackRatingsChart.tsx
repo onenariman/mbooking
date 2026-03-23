@@ -18,8 +18,8 @@ import type { FeedbackRatingsTrend } from "@/src/api/feedback.api";
 import { cn } from "@/src/lib/utils";
 
 const ratingChartConfig = {
-  percent: {
-    label: "Рейтинг",
+  avg: {
+    label: "Средняя оценка",
     color: "hsl(var(--chart-2))",
   },
 } satisfies ChartConfig;
@@ -30,17 +30,6 @@ type FeedbackRatingsChartProps = {
   periodLabel: string;
 };
 
-const formatDelta = (value: number | null) => {
-  if (value === null) return "н/д";
-  const sign = value > 0 ? "+" : "";
-  return `${sign}${value}`;
-};
-
-const deltaClassName = (value: number | null) => {
-  if (value === null || value === 0) return "text-muted-foreground";
-  return value > 0 ? "text-emerald-600" : "text-red-600";
-};
-
 export default function FeedbackRatingsChart({
   data,
   isLoading,
@@ -48,9 +37,7 @@ export default function FeedbackRatingsChart({
 }: FeedbackRatingsChartProps) {
   const chartData = data.map((item) => ({
     label: item.label,
-    percent: item.percent ?? 0,
-    avg: item.avg,
-    delta: item.delta,
+    avg: item.avg ?? 0,
     sampleSize: item.sampleSize,
   }));
 
@@ -59,19 +46,19 @@ export default function FeedbackRatingsChart({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Рейтинг по вопросам</CardTitle>
+        <CardTitle>Средние оценки по вопросам</CardTitle>
         <CardDescription>
-          Нормировано до 100% и сравнение с предыдущим периодом ({periodLabel}).
+          Оценки по шкале от 1 до 5 за выбранный диапазон ({periodLabel}).
         </CardDescription>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <div className="rounded-2xl border border-dashed p-6 text-sm text-muted-foreground">
-            Загружаем рейтинги...
+            Загружаем оценки...
           </div>
         ) : !hasData ? (
           <div className="rounded-2xl border border-dashed p-6 text-sm text-muted-foreground">
-            Нет данных для рейтингов за выбранный период.
+            Нет данных по оценкам за выбранный диапазон.
           </div>
         ) : (
           <>
@@ -83,7 +70,7 @@ export default function FeedbackRatingsChart({
                   type="category"
                   tickLine={false}
                   axisLine={false}
-                  width={170}
+                  width={180}
                   tick={({ x, y, payload }) => (
                     <text
                       x={x}
@@ -92,37 +79,32 @@ export default function FeedbackRatingsChart({
                       textAnchor="end"
                       className={cn("fill-muted-foreground text-xs")}
                     >
-                      {String(payload.value).slice(0, 24)}
+                      {String(payload.value).slice(0, 28)}
                     </text>
                   )}
                 />
                 <XAxis
-                  dataKey="percent"
+                  dataKey="avg"
                   type="number"
-                  domain={[0, 100]}
-                  tickFormatter={(value) => `${value}%`}
+                  domain={[0, 5]}
+                  tickFormatter={(value) => `${value}/5`}
                 />
                 <ChartTooltip
                   cursor={false}
                   content={
                     <ChartTooltipContent
-                      formatter={(value, _name, item) => {
-                        const avg = item.payload?.avg;
-                        const avgText =
-                          avg === null ? "н/д" : `${avg.toFixed(1)}/5`;
-                        return (
-                          <div className="flex w-full items-center justify-between gap-2">
-                            <span>{value}%</span>
-                            <span className="text-muted-foreground">
-                              {avgText}
-                            </span>
-                          </div>
-                        );
-                      }}
+                      formatter={(value, _name, item) => (
+                        <div className="flex w-full items-center justify-between gap-2">
+                          <span>{value}/5</span>
+                          <span className="text-muted-foreground">
+                            {item.payload?.sampleSize ?? 0} отзывов
+                          </span>
+                        </div>
+                      )}
                     />
                   }
                 />
-                <Bar dataKey="percent" fill="var(--color-percent)" radius={6} />
+                <Bar dataKey="avg" fill="var(--color-avg)" radius={6} />
               </BarChart>
             </ChartContainer>
 
@@ -130,12 +112,12 @@ export default function FeedbackRatingsChart({
               {data.map((item) => (
                 <div
                   key={item.key}
-                  className="flex items-center justify-between"
+                  className="flex items-center justify-between gap-4"
                 >
                   <span className="text-muted-foreground">{item.label}</span>
-                  <span className={deltaClassName(item.delta)}>
-                    Δ {formatDelta(item.delta)}
-                    {item.sampleSize > 0 ? ` (n=${item.sampleSize})` : ""}
+                  <span>
+                    {item.avg === null ? "н/д" : `${item.avg.toFixed(1)}/5`}
+                    {item.sampleSize > 0 ? ` (${item.sampleSize} отзывов)` : ""}
                   </span>
                 </div>
               ))}

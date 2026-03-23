@@ -1,5 +1,5 @@
-import RangeRecommendationsSection from "@/components/Recommendations/RangeRecommendationsSection";
+import { redirect } from "next/navigation";
 
 export default function RangeRecommendationsPage() {
-  return <RangeRecommendationsSection />;
+  redirect("/recommendations");
 }

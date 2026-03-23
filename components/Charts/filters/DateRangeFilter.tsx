@@ -18,6 +18,7 @@ type DateRangeFilterProps = {
   onChange: (range: DateRange | undefined) => void;
   onResetToCurrentMonth: () => void;
   hasSelectedRange: boolean;
+  showSecondaryAction?: boolean;
 };
 
 export default function DateRangeFilter({
@@ -25,6 +26,7 @@ export default function DateRangeFilter({
   onChange,
   onResetToCurrentMonth,
   hasSelectedRange,
+  showSecondaryAction = true,
 }: DateRangeFilterProps) {
   const [calendarOpen, setCalendarOpen] = useState(false);
 
@@ -66,13 +68,15 @@ export default function DateRangeFilter({
         </PopoverContent>
       </Popover>
 
-      <Button
-        variant="secondary"
-        onClick={onResetToCurrentMonth}
-        disabled={!hasSelectedRange}
-      >
-        Текущий месяц
-      </Button>
+      {showSecondaryAction ? (
+        <Button
+          variant="secondary"
+          onClick={onResetToCurrentMonth}
+          disabled={!hasSelectedRange}
+        >
+          Текущий месяц
+        </Button>
+      ) : null}
     </div>
   );
 }

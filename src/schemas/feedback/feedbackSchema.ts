@@ -44,6 +44,10 @@ export const aiRecommendationSchema = z.object({
   model_name: z.string().nullable(),
   input_tokens: z.number().int().nullable(),
   output_tokens: z.number().int().nullable(),
+  prompt_id: z.string().nullable().optional(),
+  prompt_id_snapshot: z.string().nullable().optional(),
+  prompt_name_snapshot: z.string().nullable().optional(),
+  prompt_snapshot: z.string().nullable().optional(),
   created_at: z.string(),
 });
 
@@ -63,6 +67,7 @@ export const recommendationJobSchema = z.object({
   period_type: recommendationPeriodSchema,
   period_from: z.string(),
   period_to: z.string(),
+  prompt_id: z.string().nullable().optional(),
   status: recommendationJobStatusSchema,
   requested_at: z.string(),
   started_at: z.string().nullable(),
@@ -91,12 +96,33 @@ export const submitFeedbackSchema = z.object({
   score_recommendation: z.number().int().min(1).max(5).nullable().optional(),
 });
 
+export const recommendationPromptSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  name: z.string(),
+  content: z.string(),
+  is_default: z.boolean(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export const recommendationPromptInputSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  content: z.string().trim().min(1).max(8000),
+  is_default: z.boolean().optional(),
+});
+
+export const recommendationPromptArraySchema = z.array(
+  recommendationPromptSchema,
+);
+
 export type ZodRecommendationPeriod = z.infer<typeof recommendationPeriodSchema>;
 export type ZodFeedbackToken = z.infer<typeof feedbackTokenSchema>;
 export type ZodFeedbackResponse = z.infer<typeof feedbackResponseSchema>;
 export type ZodAiRecommendation = z.infer<typeof aiRecommendationSchema>;
 export type ZodRecommendationJob = z.infer<typeof recommendationJobSchema>;
 export type ZodSubmitFeedback = z.infer<typeof submitFeedbackSchema>;
+export type ZodRecommendationPrompt = z.infer<typeof recommendationPromptSchema>;
 
 
 

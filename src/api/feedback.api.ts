@@ -1,8 +1,7 @@
-﻿import {
+import {
   recommendationJobSchema,
   ZodAiRecommendation,
   ZodRecommendationJob,
-  ZodRecommendationPeriod,
   ZodSubmitFeedback,
 } from "@/src/schemas/feedback/feedbackSchema";
 
@@ -10,10 +9,7 @@ export type FeedbackRatingsTrend = {
   key: string;
   label: string;
   avg: number | null;
-  percent: number | null;
-  delta: number | null;
   sampleSize: number;
-  prevSampleSize: number;
 };
 
 export const createFeedbackToken = async (expiresIn = "14 days") => {
@@ -22,12 +18,15 @@ export const createFeedbackToken = async (expiresIn = "14 days") => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ expiresIn }),
   });
-  const payload = (await response.json()) as { data?: string; message?: string };
+  const payload = (await response.json()) as {
+    data?: string;
+    message?: string;
+  };
   if (!response.ok) {
-    throw new Error(payload.message || "РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕР·РґР°С‚СЊ С‚РѕРєРµРЅ");
+    throw new Error(payload.message || "Не удалось создать токен");
   }
   if (!payload.data) {
-    throw new Error("РћС‚РІРµС‚ СЃРµСЂРІРµСЂР° РЅРµ СЃРѕРґРµСЂР¶РёС‚ РґР°РЅРЅС‹С…");
+    throw new Error("Ответ сервера не содержит данных");
   }
   return payload.data;
 };
@@ -43,32 +42,15 @@ export const submitFeedback = async (payload: ZodSubmitFeedback) => {
     message?: string;
   };
   if (!response.ok) {
-    throw new Error(responsePayload.message || "РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ РѕС‚Р·С‹РІ");
+    throw new Error(responsePayload.message || "Не удалось отправить отзыв");
   }
   if (!responsePayload.data) {
-    throw new Error("РћС‚РІРµС‚ СЃРµСЂРІРµСЂР° РЅРµ СЃРѕРґРµСЂР¶РёС‚ РґР°РЅРЅС‹С…");
+    throw new Error("Ответ сервера не содержит данных");
   }
   return responsePayload.data;
 };
 
 export const fetchRecommendations = async (
-  period: ZodRecommendationPeriod,
-): Promise<ZodAiRecommendation[]> => {
-  const params = new URLSearchParams({ period });
-  const response = await fetch(`/api/recommendations?${params.toString()}`, {
-    method: "GET",
-  });
-  const payload = (await response.json()) as {
-    data?: ZodAiRecommendation[];
-    message?: string;
-  };
-  if (!response.ok) {
-    throw new Error(payload.message || "РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ СЂРµРєРѕРјРµРЅРґР°С†РёРё");
-  }
-  return payload.data ?? [];
-};
-
-export const fetchRecommendationsByRange = async (
   from: string,
   to: string,
 ): Promise<ZodAiRecommendation[]> => {
@@ -81,7 +63,7 @@ export const fetchRecommendationsByRange = async (
     message?: string;
   };
   if (!response.ok) {
-    throw new Error(payload.message || "РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ СЂРµРєРѕРјРµРЅРґР°С†РёРё");
+    throw new Error(payload.message || "Не удалось загрузить рекомендации");
   }
   return payload.data ?? [];
 };
@@ -98,9 +80,10 @@ export type FeedbackResponseItem = {
 };
 
 export const fetchFeedbackResponses = async (
-  period: ZodRecommendationPeriod,
+  from: string,
+  to: string,
 ): Promise<FeedbackResponseItem[]> => {
-  const params = new URLSearchParams({ period });
+  const params = new URLSearchParams({ from, to });
   const response = await fetch(`/api/feedback/responses?${params.toString()}`, {
     method: "GET",
   });
@@ -109,9 +92,23 @@ export const fetchFeedbackResponses = async (
     message?: string;
   };
   if (!response.ok) {
-    throw new Error(payload.message || "РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РѕС‚Р·С‹РІС‹");
+    throw new Error(payload.message || "Не удалось загрузить отзывы");
   }
   return payload.data ?? [];
+};
+
+export const deleteFeedbackResponse = async (feedbackId: string): Promise<void> => {
+  const params = new URLSearchParams({ id: feedbackId });
+  const response = await fetch(`/api/feedback/responses?${params.toString()}`, {
+    method: "DELETE",
+  });
+  const payload = (await response.json()) as {
+    data?: boolean;
+    message?: string;
+  };
+  if (!response.ok) {
+    throw new Error(payload.message || "Не удалось удалить отзыв");
+  }
 };
 
 export const deleteRecommendation = async (
@@ -121,16 +118,20 @@ export const deleteRecommendation = async (
   const response = await fetch(`/api/recommendations?${params.toString()}`, {
     method: "DELETE",
   });
-  const payload = (await response.json()) as { data?: boolean; message?: string };
+  const payload = (await response.json()) as {
+    data?: boolean;
+    message?: string;
+  };
   if (!response.ok) {
-    throw new Error(payload.message || "РќРµ СѓРґР°Р»РѕСЃСЊ СѓРґР°Р»РёС‚СЊ СЂРµРєРѕРјРµРЅРґР°С†РёСЋ");
+    throw new Error(payload.message || "Не удалось удалить рекомендацию");
   }
 };
 
 export const fetchFeedbackRatingsTrend = async (
-  period: ZodRecommendationPeriod,
+  from: string,
+  to: string,
 ): Promise<FeedbackRatingsTrend[]> => {
-  const params = new URLSearchParams({ period });
+  const params = new URLSearchParams({ from, to });
   const response = await fetch(`/api/feedback/ratings?${params.toString()}`, {
     method: "GET",
   });
@@ -139,7 +140,7 @@ export const fetchFeedbackRatingsTrend = async (
     message?: string;
   };
   if (!response.ok) {
-    throw new Error(payload.message || "РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РѕС†РµРЅРєРё");
+    throw new Error(payload.message || "Не удалось загрузить оценки");
   }
   return payload.data ?? [];
 };
@@ -147,7 +148,8 @@ export const fetchFeedbackRatingsTrend = async (
 const parseRecommendationJob = (payload: unknown): ZodRecommendationJob => {
   const parsed = recommendationJobSchema.safeParse(payload);
   if (!parsed.success) {
-    throw new Error("РћС‚РІРµС‚ СЃРµСЂРІРµСЂР° РЅРµ СЃРѕРґРµСЂР¶РёС‚ РєРѕСЂСЂРµРєС‚РЅС‹С… РґР°РЅРЅС‹С…");
+    console.error("Job validation failed:", parsed.error);
+    throw new Error("Ответ сервера не содержит корректных данных");
   }
   return parsed.data;
 };
@@ -156,62 +158,86 @@ class InsufficientFeedbackError extends Error {
   code = "INSUFFICIENT_FEEDBACK" as const;
 
   constructor() {
-    super("РќРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ РѕС‚Р·С‹РІРѕРІ РґР»СЏ СЂРµРєРѕРјРµРЅРґР°С†РёР№");
+    super("Недостаточно отзывов для рекомендаций");
     this.name = "InsufficientFeedbackError";
   }
 }
 
 export { InsufficientFeedbackError };
 
-export type GenerateRecommendationsPayload =
-  | { period: ZodRecommendationPeriod }
-  | { from: string; to: string };
+type BaseRecommendationsPayload = {
+  promptId?: string | null;
+};
+
+export type GenerateRecommendationsPayload = {
+  from: string;
+  to: string;
+} & BaseRecommendationsPayload;
 
 export const createRecommendationJob = async (
   payload: GenerateRecommendationsPayload,
 ): Promise<ZodRecommendationJob> => {
+  const { promptId, ...rest } = payload;
   const response = await fetch("/api/recommendations/jobs", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      ...rest,
+      ...(promptId ? { prompt_id: promptId } : {}),
+    }),
   });
 
   const responsePayload = (await response.json()) as {
     message?: string;
-    data?: ZodRecommendationJob;
+    data?: unknown;
   };
 
   if (!response.ok) {
-    throw new Error(responsePayload.message || "РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕР·РґР°С‚СЊ Р·Р°РґР°С‡Сѓ");
+    console.error("API Error Response:", responsePayload);
+    throw new Error(responsePayload.message || "Не удалось создать задачу");
   }
 
   if (!responsePayload.data) {
-    throw new Error("РћС‚РІРµС‚ СЃРµСЂРІРµСЂР° РЅРµ СЃРѕРґРµСЂР¶РёС‚ РґР°РЅРЅС‹С…");
+    console.error("No data in response:", responsePayload);
+    throw new Error("Ответ сервера не содержит данных");
   }
 
-  return parseRecommendationJob(responsePayload.data);
+  const job = parseRecommendationJob(responsePayload.data);
+
+  if (!job.id) {
+    console.error("Job has no ID:", job);
+    throw new Error("Сервер вернул задачу без ID");
+  }
+
+  return job;
 };
 
 export const fetchRecommendationJob = async (
   jobId: string,
 ): Promise<ZodRecommendationJob> => {
+  if (!jobId || jobId.trim() === "") {
+    throw new Error("ID задачи не установлен");
+  }
+
   const response = await fetch(`/api/recommendations/jobs/${jobId}`, {
     method: "GET",
   });
 
   const responsePayload = (await response.json()) as {
     message?: string;
-    data?: ZodRecommendationJob;
+    data?: unknown;
   };
 
   if (!response.ok) {
-    throw new Error(responsePayload.message || "РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ Р·Р°РґР°С‡Сѓ");
+    console.error("API Error Response:", responsePayload);
+    throw new Error(responsePayload.message || "Не удалось загрузить задачу");
   }
 
   if (!responsePayload.data) {
-    throw new Error("РћС‚РІРµС‚ СЃРµСЂРІРµСЂР° РЅРµ СЃРѕРґРµСЂР¶РёС‚ РґР°РЅРЅС‹С…");
+    console.error("No data in response:", responsePayload);
+    throw new Error("Ответ сервера не содержит данных");
   }
 
   return parseRecommendationJob(responsePayload.data);
@@ -220,21 +246,27 @@ export const fetchRecommendationJob = async (
 export const runRecommendationJob = async (
   jobId: string,
 ): Promise<ZodRecommendationJob> => {
+  if (!jobId || jobId.trim() === "") {
+    throw new Error("ID задачи не установлен");
+  }
+
   const response = await fetch(`/api/recommendations/jobs/${jobId}/run`, {
     method: "POST",
   });
 
   const responsePayload = (await response.json()) as {
     message?: string;
-    data?: ZodRecommendationJob;
+    data?: unknown;
   };
 
   if (!response.ok) {
-    throw new Error(responsePayload.message || "РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РїСѓСЃС‚РёС‚СЊ Р·Р°РґР°С‡Сѓ");
+    console.error("API Error Response:", responsePayload);
+    throw new Error(responsePayload.message || "Не удалось запустить задачу");
   }
 
   if (!responsePayload.data) {
-    throw new Error("РћС‚РІРµС‚ СЃРµСЂРІРµСЂР° РЅРµ СЃРѕРґРµСЂР¶РёС‚ РґР°РЅРЅС‹С…");
+    console.error("No data in response:", responsePayload);
+    throw new Error("Ответ сервера не содержит данных");
   }
 
   return parseRecommendationJob(responsePayload.data);
@@ -246,6 +278,10 @@ export const waitForRecommendationJob = async (
   jobId: string,
   options?: { timeoutMs?: number; intervalMs?: number },
 ): Promise<ZodRecommendationJob> => {
+  if (!jobId || jobId.trim() === "") {
+    throw new Error("ID задачи не установлен");
+  }
+
   const timeoutMs = options?.timeoutMs ?? 240_000;
   const intervalMs = options?.intervalMs ?? 2_000;
   const startedAt = Date.now();
@@ -259,17 +295,14 @@ export const waitForRecommendationJob = async (
       if (job.error_code === "INSUFFICIENT_FEEDBACK") {
         throw new InsufficientFeedbackError();
       }
-      throw new Error(job.error_message || "РћС€РёР±РєР° РіРµРЅРµСЂР°С†РёРё СЂРµРєРѕРјРµРЅРґР°С†РёР№");
+      throw new Error(job.error_message || "Ошибка генерации рекомендаций");
     }
     await wait(intervalMs);
   }
 
-  throw new Error("РџСЂРµРІС‹С€РµРЅРѕ РІСЂРµРјСЏ РѕР¶РёРґР°РЅРёСЏ РіРµРЅРµСЂР°С†РёРё");
+  throw new Error("Превышено время ожидания генерации");
 };
+
 export const generateRecommendations = async (
   payload: GenerateRecommendationsPayload,
 ): Promise<ZodRecommendationJob> => createRecommendationJob(payload);
-
-
-
-

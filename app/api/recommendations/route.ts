@@ -56,9 +56,9 @@ const getPeriodRange = (period: Period): PeriodRange => {
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const parsed = requestSchema.safeParse({
-    period: url.searchParams.get("period"),
-    from: url.searchParams.get("from"),
-    to: url.searchParams.get("to"),
+    period: url.searchParams.get("period") ?? undefined,
+    from: url.searchParams.get("from") ?? undefined,
+    to: url.searchParams.get("to") ?? undefined,
   });
 
   if (!parsed.success) {
@@ -89,7 +89,6 @@ export async function GET(request: Request) {
       .lte("period_to", range.to);
   } else if (parsed.data.from && parsed.data.to) {
     query = query
-      .eq("period_type", "custom")
       .eq("period_from", parsed.data.from)
       .eq("period_to", parsed.data.to);
   }
@@ -128,14 +127,23 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ message: "Не авторизован" }, { status: 401 });
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("ai_recommendations")
     .delete()
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     return NextResponse.json({ message: mapSupabaseError(error) }, { status: 500 });
+  }
+
+  if (!data) {
+    return NextResponse.json(
+      { message: "Рекомендация не найдена или недоступна для удаления" },
+      { status: 404 },
+    );
   }
 
   return NextResponse.json({ data: true });

@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createClient } from "@/src/utils/supabase/server";
 import {
   recommendationRequestSchema,
@@ -34,17 +34,46 @@ export async function POST(request: Request) {
   }
 
   const { periodType, range } = resolved;
+  const promptId = parsed.data.prompt_id ?? null;
 
-  const { data: existing, error: existingError } = await supabase
+  if (promptId) {
+    const { data: prompts, error: promptError } = await supabase
+      .from("recommendation_prompts")
+      .select("id")
+      .eq("id", promptId)
+      .eq("user_id", user.id)
+      .limit(1);
+
+    if (promptError) {
+      return NextResponse.json({ message: mapSupabaseError(promptError) }, { status: 500 });
+    }
+
+    if (!prompts || prompts.length === 0) {
+      return NextResponse.json({ message: "Промпт не найден" }, { status: 404 });
+    }
+  }
+
+  let existingQuery = supabase
     .from("recommendation_jobs")
     .select("*")
     .eq("user_id", user.id)
-    .eq("period_type", periodType)
     .eq("period_from", range.from)
     .eq("period_to", range.to)
     .in("status", ["queued", "running"])
     .order("requested_at", { ascending: false })
     .limit(1);
+
+  if (parsed.data.period) {
+    existingQuery = existingQuery.eq("period_type", periodType);
+  }
+
+  if (promptId) {
+    existingQuery = existingQuery.eq("prompt_id", promptId);
+  } else {
+    existingQuery = existingQuery.is("prompt_id", null);
+  }
+
+  const { data: existing, error: existingError } = await existingQuery;
 
   if (existingError) {
     return NextResponse.json({ message: mapSupabaseError(existingError) }, { status: 500 });
@@ -61,6 +90,7 @@ export async function POST(request: Request) {
       period_type: periodType,
       period_from: range.from,
       period_to: range.to,
+      prompt_id: promptId,
       status: "queued",
     })
     .select("*")

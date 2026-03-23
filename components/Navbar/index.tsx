@@ -113,18 +113,6 @@ const NavbarMenu = () => {
             </DropdownMenuItem>
             <DropdownMenuSeparator />
           </DropdownMenuGroup>
-          <DropdownMenuGroup>
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>Уход</DropdownMenuSubTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuSubContent>
-                  <DropdownMenuItem>Подобрать уход</DropdownMenuItem>
-                  <DropdownMenuItem>Товары</DropdownMenuItem>
-                </DropdownMenuSubContent>
-              </DropdownMenuPortal>
-            </DropdownMenuSub>
-          </DropdownMenuGroup>
-          <DropdownMenuSeparator />
           <DropdownMenuItem
             onSelect={(event) => {
               event.preventDefault();

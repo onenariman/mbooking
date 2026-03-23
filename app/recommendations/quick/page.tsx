@@ -1,5 +1,5 @@
-import QuickRecommendationsSection from "@/components/Recommendations/QuickRecommendationsSection";
+import { redirect } from "next/navigation";
 
 export default function QuickRecommendationsPage() {
-  return <QuickRecommendationsSection />;
+  redirect("/recommendations");
 }

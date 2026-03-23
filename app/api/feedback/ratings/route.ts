@@ -1,14 +1,24 @@
-import { differenceInCalendarDays, subDays, subMonths } from "date-fns";
+import { subDays, subMonths } from "date-fns";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/src/utils/supabase/server";
 import { getErrorMessage, mapSupabaseError } from "@/src/helpers/getErrorMessage";
 
 const periodSchema = z.enum(["week", "month", "3m", "6m", "9m", "12m"]);
+const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
-const requestSchema = z.object({
-  period: periodSchema,
-});
+const requestSchema = z
+  .object({
+    period: periodSchema.optional(),
+    from: dateSchema.optional(),
+    to: dateSchema.optional(),
+  })
+  .refine(
+    (data) =>
+      (data.period && !data.from && !data.to) ||
+      (!data.period && data.from && data.to),
+    { message: "Некорректные параметры" },
+  );
 
 type Period = z.infer<typeof periodSchema>;
 
@@ -50,16 +60,14 @@ const getPeriodRange = (period: Period): PeriodRange => {
   return { from: toDateOnlyIso(subMonths(now, 12)), to };
 };
 
-const getPreviousRange = (range: PeriodRange): PeriodRange => {
-  const fromDate = new Date(`${range.from}T00:00:00.000Z`);
-  const toDate = new Date(`${range.to}T00:00:00.000Z`);
-  const days = Math.max(1, differenceInCalendarDays(toDate, fromDate) + 1);
-  const prevTo = subDays(fromDate, 1);
-  const prevFrom = subDays(prevTo, days - 1);
+const resolveRange = (data: z.infer<typeof requestSchema>): PeriodRange => {
+  if (data.period) {
+    return getPeriodRange(data.period);
+  }
 
   return {
-    from: toDateOnlyIso(prevFrom),
-    to: toDateOnlyIso(prevTo),
+    from: data.from ?? "",
+    to: data.to ?? "",
   };
 };
 
@@ -94,14 +102,18 @@ const calcAverage = (rows: RatingsRow[], key: keyof RatingsRow) => {
   }
 
   const avg = values.reduce((sum, value) => sum + value, 0) / values.length;
-  const rounded = Math.round(avg * 10) / 10;
-  return { avg: rounded, count: values.length };
+  return {
+    avg: Math.round(avg * 10) / 10,
+    count: values.length,
+  };
 };
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const parsed = requestSchema.safeParse({
-    period: url.searchParams.get("period"),
+    period: url.searchParams.get("period") ?? undefined,
+    from: url.searchParams.get("from") ?? undefined,
+    to: url.searchParams.get("to") ?? undefined,
   });
 
   if (!parsed.success) {
@@ -119,13 +131,8 @@ export async function GET(request: Request) {
   }
 
   try {
-    const range = getPeriodRange(parsed.data.period);
-    const prevRange = getPreviousRange(range);
-
-    const [currentRows, prevRows] = await Promise.all([
-      fetchScoresForRange(supabase, user.id, range),
-      fetchScoresForRange(supabase, user.id, prevRange),
-    ]);
+    const range = resolveRange(parsed.data);
+    const rows = await fetchScoresForRange(supabase, user.id, range);
 
     const keys = [
       "score_result",
@@ -144,32 +151,20 @@ export async function GET(request: Request) {
     };
 
     const data = keys.map((key) => {
-      const current = calcAverage(currentRows, key);
-      const previous = calcAverage(prevRows, key);
-
-      const delta =
-        current.avg !== null && previous.avg !== null
-          ? Math.round((current.avg - previous.avg) * 10) / 10
-          : null;
-
-      const percent =
-        current.avg !== null ? Math.round((current.avg / 5) * 100) : null;
+      const current = calcAverage(rows, key);
 
       return {
         key,
         label: labels[key],
         avg: current.avg,
-        percent,
-        delta,
         sampleSize: current.count,
-        prevSampleSize: previous.count,
       };
     });
 
     return NextResponse.json({ data });
   } catch (error) {
     return NextResponse.json(
-      { message: getErrorMessage(error, "Ошибка расчёта") },
+      { message: getErrorMessage(error, "Ошибка расчета") },
       { status: 500 },
     );
   }

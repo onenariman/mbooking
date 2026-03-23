@@ -4,9 +4,9 @@ import { mapSupabaseError } from "@/src/helpers/getErrorMessage";
 
 export async function GET(
   _request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  const jobId = params.id;
+  const { id: jobId } = await params;
   if (!jobId) {
     return NextResponse.json({ message: "Не задан id" }, { status: 400 });
   }

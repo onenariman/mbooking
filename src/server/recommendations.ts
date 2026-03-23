@@ -13,6 +13,7 @@ export const recommendationRequestSchema = z
     period: periodSchema.optional(),
     from: dateSchema.optional(),
     to: dateSchema.optional(),
+    prompt_id: z.string().uuid().optional().nullable(),
   })
   .refine(
     (data) =>
@@ -169,6 +170,22 @@ export const buildPrompt = (params: {
       .join("\n");
   })();
 
+  const buildContextBlock = () =>
+    [
+      "Контекст периода:",
+      `period_type: ${params.periodType}`,
+      `period_from: ${params.from}`,
+      `period_to: ${params.to}`,
+      `planning_horizon: ${horizonLabel}`,
+      `reviews_count: ${params.feedback.length}`,
+      "",
+      "Сводные оценки (среднее; n):",
+      scoreStats || "нет данных",
+      "",
+      "Отзывы:",
+      numberedReviews,
+    ].join("\n");
+
   return [
     "Ты — аналитик клиентского опыта студии электроэпиляции и косметологии.",
     "Сделай практичные рекомендации по отзывам и оценкам 1–5. Используй только данные ниже.",
@@ -192,19 +209,107 @@ export const buildPrompt = (params: {
     `- actions_plan: 3–5 действий на горизонт ${horizonLabel}`,
     "- учитывай оценки; низкие (<=3) считаются сигналом проблемы",
     "",
-    "Контекст периода:",
-    `period_type: ${params.periodType}`,
-    `period_from: ${params.from}`,
-    `period_to: ${params.to}`,
-    `planning_horizon: ${horizonLabel}`,
-    `reviews_count: ${params.feedback.length}`,
-    "",
-    "Сводные оценки (среднее; n):",
-    scoreStats || "нет данных",
-    "",
-    "Отзывы:",
-    numberedReviews,
+    buildContextBlock(),
   ].join("\n");
+};
+
+export const buildPromptFromTemplate = (
+  params: {
+    periodType: string;
+    from: string;
+    to: string;
+    horizonLabel: string;
+    feedback: FeedbackItem[];
+  },
+  template: string,
+) => {
+  const basePrompt = buildPrompt(params);
+  const trimmed = template.trim();
+  if (!trimmed) {
+    return basePrompt;
+  }
+
+  const contextBlock = (() => {
+    const horizonLabel = params.horizonLabel;
+
+    const formatScore = (value: number | null) =>
+      Number.isFinite(value) ? String(value) : "нет";
+
+    const compactFeedback = params.feedback
+      .filter((item) => item.text?.trim())
+      .slice(0, MAX_FEEDBACK_ITEMS)
+      .map((item) => {
+        const text = item.text
+          .trim()
+          .replace(/\s+/g, " ")
+          .slice(0, MAX_FEEDBACK_CHARS);
+        const scores = [
+          `рез=${formatScore(item.scores.score_result)}`,
+          `объясн=${formatScore(item.scores.score_explanation)}`,
+          `комфорт=${formatScore(item.scores.score_comfort)}`,
+          `запись=${formatScore(item.scores.score_booking)}`,
+          `рек=${formatScore(item.scores.score_recommendation)}`,
+        ].join(", ");
+        return `${text} | оценки: ${scores}`;
+      });
+
+    const numberedReviews = compactFeedback
+      .map((item, idx) => `${idx + 1}. ${item}`)
+      .join("\n");
+
+    const scoreStats = (() => {
+      const keys = [
+        "score_result",
+        "score_explanation",
+        "score_comfort",
+        "score_booking",
+        "score_recommendation",
+      ] as const;
+      const labels: Record<(typeof keys)[number], string> = {
+        score_result: "результат процедуры",
+        score_explanation: "объяснения мастера",
+        score_comfort: "комфорт во время процедуры",
+        score_booking: "удобство записи",
+        score_recommendation: "готовность рекомендовать",
+      };
+
+      return keys
+        .map((key) => {
+          const values = params.feedback
+            .map((item) => item.scores[key])
+            .filter((value): value is number => Number.isFinite(value));
+          if (!values.length) {
+            return `- ${labels[key]}: нет данных`;
+          }
+          const avg =
+            values.reduce((sum, value) => sum + value, 0) / values.length;
+          const rounded = Math.round(avg * 10) / 10;
+          return `- ${labels[key]}: ${rounded} (n=${values.length})`;
+        })
+        .join("\n");
+    })();
+
+    return [
+      "Контекст периода:",
+      `period_type: ${params.periodType}`,
+      `period_from: ${params.from}`,
+      `period_to: ${params.to}`,
+      `planning_horizon: ${horizonLabel}`,
+      `reviews_count: ${params.feedback.length}`,
+      "",
+      "Сводные оценки (среднее; n):",
+      scoreStats || "нет данных",
+      "",
+      "Отзывы:",
+      numberedReviews,
+    ].join("\n");
+  })();
+
+  if (trimmed.includes("{{context}}")) {
+    return trimmed.replace("{{context}}", contextBlock);
+  }
+
+  return `${trimmed}\n\n${contextBlock}`;
 };
 
 const levelRu = (value?: string) => {

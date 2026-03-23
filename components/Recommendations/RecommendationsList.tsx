@@ -12,12 +12,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { ZodAiRecommendation } from "@/src/schemas/feedback/feedbackSchema";
+import DeleteConfirmButton from "./DeleteConfirmButton";
 
 type RecommendationsListProps = {
   recommendations: ZodAiRecommendation[];
   periodLabel: string;
   isDeleting: boolean;
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => Promise<void>;
 };
 
 export default function RecommendationsList({
@@ -26,6 +27,15 @@ export default function RecommendationsList({
   isDeleting,
   onDelete,
 }: RecommendationsListProps) {
+  const getPromptBadgeLabel = (item: ZodAiRecommendation) => {
+    const snapshotName = item.prompt_name_snapshot?.trim();
+    if (snapshotName) {
+      return snapshotName;
+    }
+
+    return item.prompt_id_snapshot ? "Пользовательский промпт" : "Системный";
+  };
+
   const renderSummary = (summary: string) => {
     const sectionTitles = new Set([
       "Сводка",
@@ -63,7 +73,7 @@ export default function RecommendationsList({
 
   return (
     <Accordion type="single" collapsible className="w-full">
-      {recommendations.map((item, index) => (
+      {recommendations.map((item) => (
         <AccordionItem key={item.id} value={item.id}>
           <AccordionTrigger className="gap-3">
             <div className="flex w-full flex-wrap items-center justify-between gap-2">
@@ -74,23 +84,33 @@ export default function RecommendationsList({
                     locale: ru,
                   })}
                 </span>
-                {index === 0 && <Badge variant="default">Последняя</Badge>}
+                <span className="text-xs text-muted-foreground">
+                  {format(new Date(item.created_at), "HH:mm")}
+                </span>
+                <Badge variant="secondary">{getPromptBadgeLabel(item)}</Badge>
               </div>
               <span className="text-xs text-muted-foreground">{periodLabel}</span>
             </div>
           </AccordionTrigger>
           <AccordionContent className="space-y-3">
             <div className="flex justify-end">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-red-600 hover:text-red-700"
-                onClick={() => onDelete(item.id)}
-                disabled={isDeleting}
+              <DeleteConfirmButton
+                title="Удалить рекомендацию?"
+                description="Это действие нельзя отменить. Рекомендация будет удалена из списка."
+                onDelete={() => onDelete(item.id)}
+                successMessage="Рекомендация удалена"
+                errorMessage="Ошибка удаления"
               >
-                <Trash2 className="mr-1 h-4 w-4" />
-                Удалить
-              </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-red-600 hover:text-red-700"
+                  disabled={isDeleting}
+                >
+                  <Trash2 className="mr-1 h-4 w-4" />
+                  Удалить
+                </Button>
+              </DeleteConfirmButton>
             </div>
             <div className="text-foreground">{renderSummary(item.summary)}</div>
             <div className="rounded-xl bg-muted/40 p-3 text-sm">

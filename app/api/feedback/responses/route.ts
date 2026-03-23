@@ -6,10 +6,20 @@ import { feedbackResponseArraySchema } from "@/src/schemas/feedback/feedbackSche
 import { mapSupabaseError } from "@/src/helpers/getErrorMessage";
 
 const periodSchema = z.enum(["week", "month", "3m", "6m", "9m", "12m"]);
+const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
-const requestSchema = z.object({
-  period: periodSchema,
-});
+const requestSchema = z
+  .object({
+    period: periodSchema.optional(),
+    from: dateSchema.optional(),
+    to: dateSchema.optional(),
+  })
+  .refine(
+    (data) =>
+      (data.period && !data.from && !data.to) ||
+      (!data.period && data.from && data.to),
+    { message: "Некорректные параметры" },
+  );
 
 type Period = z.infer<typeof periodSchema>;
 
@@ -43,10 +53,23 @@ const getPeriodRange = (period: Period): PeriodRange => {
   return { from: toDateOnlyIso(subMonths(now, 12)), to };
 };
 
+const resolveRange = (data: z.infer<typeof requestSchema>): PeriodRange => {
+  if (data.period) {
+    return getPeriodRange(data.period);
+  }
+
+  return {
+    from: data.from ?? "",
+    to: data.to ?? "",
+  };
+};
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const parsed = requestSchema.safeParse({
-    period: url.searchParams.get("period"),
+    period: url.searchParams.get("period") ?? undefined,
+    from: url.searchParams.get("from") ?? undefined,
+    to: url.searchParams.get("to") ?? undefined,
   });
 
   if (!parsed.success) {
@@ -63,7 +86,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ message: "Не авторизован" }, { status: 401 });
   }
 
-  const range = getPeriodRange(parsed.data.period);
+  const range = resolveRange(parsed.data);
 
   const { data, error } = await supabase
     .from("feedback_responses")
@@ -88,4 +111,44 @@ export async function GET(request: Request) {
   }
 
   return NextResponse.json({ data: parsedData.data });
+}
+
+export async function DELETE(request: Request) {
+  const url = new URL(request.url);
+  const id = url.searchParams.get("id");
+
+  if (!id) {
+    return NextResponse.json({ message: "Не задан id" }, { status: 400 });
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return NextResponse.json({ message: "Не авторизован" }, { status: 401 });
+  }
+
+  const { data, error } = await supabase
+    .from("feedback_responses")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    return NextResponse.json({ message: mapSupabaseError(error) }, { status: 500 });
+  }
+
+  if (!data) {
+    return NextResponse.json(
+      { message: "Отзыв не найден или недоступен для удаления" },
+      { status: 404 },
+    );
+  }
+
+  return NextResponse.json({ data: true });
 }

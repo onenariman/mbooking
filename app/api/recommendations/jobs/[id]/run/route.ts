@@ -2,6 +2,7 @@
 import { createClient } from "@/src/utils/supabase/server";
 import {
   buildPrompt,
+  buildPromptFromTemplate,
   MIN_FEEDBACK_COUNT,
   normalizeSummary,
   runLlm,
@@ -60,9 +61,9 @@ const isMeaningfulFeedback = (item: FeedbackItem) => {
 
 export async function POST(
   _request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  const jobId = params.id;
+  const { id: jobId } = await params;
   if (!jobId) {
     return NextResponse.json({ message: "Не задан id" }, { status: 400 });
   }
@@ -131,6 +132,53 @@ export async function POST(
   const periodType = job.period_type as string;
   const periodFrom = job.period_from as string;
   const periodTo = job.period_to as string;
+  const promptId = job.prompt_id as string | null | undefined;
+
+  let promptTemplate: string | null = null;
+  let promptNameSnapshot = "Системный";
+  if (promptId) {
+    const { data: prompts, error: promptError } = await supabase
+      .from("recommendation_prompts")
+      .select("id, name, content")
+      .eq("id", promptId)
+      .eq("user_id", user.id)
+      .limit(1);
+
+    if (promptError) {
+      const { data: failedJob, error } = await updateJob({
+        status: "failed",
+        finished_at: new Date().toISOString(),
+        error_code: "DB_ERROR",
+        error_message: mapSupabaseError(promptError),
+        duration_ms: Date.now() - jobStart,
+      });
+
+      if (error) {
+        return NextResponse.json({ message: mapSupabaseError(error) }, { status: 500 });
+      }
+
+      return NextResponse.json({ data: failedJob });
+    }
+
+    if (!prompts || prompts.length === 0) {
+      const { data: failedJob, error } = await updateJob({
+        status: "failed",
+        finished_at: new Date().toISOString(),
+        error_code: "PROMPT_NOT_FOUND",
+        error_message: "Промпт не найден",
+        duration_ms: Date.now() - jobStart,
+      });
+
+      if (error) {
+        return NextResponse.json({ message: mapSupabaseError(error) }, { status: 500 });
+      }
+
+      return NextResponse.json({ data: failedJob });
+    }
+
+    promptNameSnapshot = prompts[0]?.name ?? "Пользовательский промпт";
+    promptTemplate = prompts[0]?.content ?? null;
+  }
 
   const { data: feedbackRows, error: feedbackError } = await supabase
     .from("feedback_responses")
@@ -191,13 +239,16 @@ export async function POST(
   }
 
   const horizonLabel = getHorizonLabel(periodType, periodFrom, periodTo);
-  const prompt = buildPrompt({
+  const promptPayload = {
     periodType,
     from: periodFrom,
     to: periodTo,
     horizonLabel,
     feedback: meaningfulFeedback,
-  });
+  };
+  const prompt = promptTemplate
+    ? buildPromptFromTemplate(promptPayload, promptTemplate)
+    : buildPrompt(promptPayload);
 
   const promptChars = prompt.length;
   let llmResult;
@@ -230,6 +281,10 @@ export async function POST(
       period_type: periodType,
       period_from: periodFrom,
       period_to: periodTo,
+      prompt_id: promptId ?? null,
+      prompt_id_snapshot: promptId ?? null,
+      prompt_name_snapshot: promptNameSnapshot,
+      prompt_snapshot: promptTemplate ?? null,
       source_count: meaningfulFeedback.length,
       summary,
       model_name: llmResult.modelName,
