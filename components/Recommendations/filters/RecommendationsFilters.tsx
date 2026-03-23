@@ -29,7 +29,7 @@ export default function RecommendationsFilters({
   isListPromptFilterDisabled,
 }: RecommendationsFiltersProps) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-col md:flex-row md:items-center items-start gap-2">
       <DateFilter
         range={range}
         onChange={onRangeChange}

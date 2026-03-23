@@ -240,7 +240,7 @@ export default function RecommendationsSection() {
   };
 
   return (
-    <div className="flex flex-col gap-4 pb-8">
+    <div className="flex flex-col gap-4">
       <RecommendationsBreadcrumb current="Рекомендации" showRoot={false} />
 
       <Card>
@@ -252,18 +252,14 @@ export default function RecommendationsSection() {
               календарь на одном экране.
             </CardDescription>
           </div>
-          <div className="flex w-full gap-3 md:w-auto">
+          <div className="flex flex-col md:flex-row gap-3">
             <PromptSelect
               prompts={prompts}
               value={promptId ?? "system"}
               onChange={setPromptId}
               isLoading={isPromptsLoading}
             />
-            <Button
-              className="gap-2 md:self-end"
-              onClick={handleGenerate}
-              disabled={isBusy}
-            >
+            <Button onClick={handleGenerate} disabled={isBusy}>
               {isBusy ? (
                 <Spinner className="mr-1" />
               ) : (

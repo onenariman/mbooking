@@ -25,7 +25,7 @@ export default function PromptSelect({
   isLoading,
 }: PromptSelectProps) {
   return (
-    <div className="flex flex-wrap items-center justify-end gap-2">
+    <div className="flex items-center gap-2">
       <span className="text-sm text-muted-foreground">Выбрать промпт:</span>
       <Select value={value} onValueChange={onChange} disabled={isLoading}>
         <SelectTrigger className="w-fit">

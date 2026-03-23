@@ -25,7 +25,7 @@ export default function ListPromptFilter({
   return (
     <div className="flex-none">
       <Select value={value} onValueChange={onChange} disabled={disabled}>
-        <SelectTrigger className="w-[220px] sm:w-[260px]">
+        <SelectTrigger className="w-fit">
           <SelectValue placeholder="Все промпты" />
         </SelectTrigger>
         <SelectContent>

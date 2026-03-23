@@ -21,6 +21,8 @@ export default function DateFilter({
 }: DateFilterProps) {
   return (
     <div className="flex flex-wrap items-center gap-2">
+      <span className="text-sm text-muted-foreground">Фильтр:</span>
+
       <Button
         variant={isCurrentWeekSelected ? "default" : "secondary"}
         onClick={onSelectCurrentWeek}

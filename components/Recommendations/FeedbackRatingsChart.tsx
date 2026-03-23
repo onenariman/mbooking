@@ -1,6 +1,6 @@
 "use client";
 
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { RadialBar, RadialBarChart, PolarAngleAxis } from "recharts";
 import {
   Card,
   CardContent,
@@ -15,14 +15,37 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import type { FeedbackRatingsTrend } from "@/src/api/feedback.api";
-import { cn } from "@/src/lib/utils";
 
 const ratingChartConfig = {
-  avg: {
-    label: "Средняя оценка",
+  score_result: {
+    label: "Результат",
+    color: "hsl(var(--chart-1))",
+  },
+  score_explanation: {
+    label: "Объяснения",
     color: "hsl(var(--chart-2))",
   },
+  score_comfort: {
+    label: "Комфорт",
+    color: "hsl(var(--chart-3))",
+  },
+  score_booking: {
+    label: "Запись",
+    color: "hsl(var(--chart-4))",
+  },
+  score_recommendation: {
+    label: "Рекомендация",
+    color: "hsl(var(--chart-5))",
+  },
 } satisfies ChartConfig;
+
+const ratingLabels: Record<string, string> = {
+  score_result: "Результат",
+  score_explanation: "Объяснения",
+  score_comfort: "Комфорт",
+  score_booking: "Запись",
+  score_recommendation: "Рекомендация",
+};
 
 type FeedbackRatingsChartProps = {
   data: FeedbackRatingsTrend[];
@@ -35,12 +58,6 @@ export default function FeedbackRatingsChart({
   isLoading,
   periodLabel,
 }: FeedbackRatingsChartProps) {
-  const chartData = data.map((item) => ({
-    label: item.label,
-    avg: item.avg ?? 0,
-    sampleSize: item.sampleSize,
-  }));
-
   const hasData = data.some((item) => item.sampleSize > 0);
 
   return (
@@ -48,7 +65,7 @@ export default function FeedbackRatingsChart({
       <CardHeader>
         <CardTitle>Средние оценки по вопросам</CardTitle>
         <CardDescription>
-          Оценки по шкале от 1 до 5 за выбранный диапазон ({periodLabel}).
+          Средние значения по шкале от 1 до 5 за выбранный диапазон ({periodLabel}).
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -61,68 +78,101 @@ export default function FeedbackRatingsChart({
             Нет данных по оценкам за выбранный диапазон.
           </div>
         ) : (
-          <>
-            <ChartContainer config={ratingChartConfig} className="h-72 w-full">
-              <BarChart data={chartData} layout="vertical" accessibilityLayer>
-                <CartesianGrid horizontal={false} />
-                <YAxis
-                  dataKey="label"
-                  type="category"
-                  tickLine={false}
-                  axisLine={false}
-                  width={180}
-                  tick={({ x, y, payload }) => (
-                    <text
-                      x={x}
-                      y={y}
-                      dy={3}
-                      textAnchor="end"
-                      className={cn("fill-muted-foreground text-xs")}
-                    >
-                      {String(payload.value).slice(0, 28)}
-                    </text>
-                  )}
-                />
-                <XAxis
-                  dataKey="avg"
-                  type="number"
-                  domain={[0, 5]}
-                  tickFormatter={(value) => `${value}/5`}
-                />
-                <ChartTooltip
-                  cursor={false}
-                  content={
-                    <ChartTooltipContent
-                      formatter={(value, _name, item) => (
-                        <div className="flex w-full items-center justify-between gap-2">
-                          <span>{value}/5</span>
-                          <span className="text-muted-foreground">
-                            {item.payload?.sampleSize ?? 0} отзывов
-                          </span>
-                        </div>
-                      )}
-                    />
-                  }
-                />
-                <Bar dataKey="avg" fill="var(--color-avg)" radius={6} />
-              </BarChart>
-            </ChartContainer>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {data.map((item) => {
+              const chartKey =
+                item.key in ratingChartConfig ? item.key : "score_result";
+              const shortLabel = ratingLabels[item.key] ?? item.label;
+              const value = item.avg ?? 0;
+              const chartData = [
+                {
+                  key: chartKey,
+                  value,
+                  fill: `var(--color-${chartKey})`,
+                  sampleSize: item.sampleSize,
+                  label: shortLabel,
+                },
+              ];
 
-            <div className="mt-4 grid gap-2 text-sm">
-              {data.map((item) => (
+              return (
                 <div
                   key={item.key}
-                  className="flex items-center justify-between gap-4"
+                  className="rounded-2xl border bg-card p-4 shadow-sm"
                 >
-                  <span className="text-muted-foreground">{item.label}</span>
-                  <span>
-                    {item.avg === null ? "н/д" : `${item.avg.toFixed(1)}/5`}
-                    {item.sampleSize > 0 ? ` (${item.sampleSize} отзывов)` : ""}
-                  </span>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-medium leading-none">
+                        {shortLabel}
+                      </h3>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {item.sampleSize > 0
+                          ? `${item.sampleSize} отзывов`
+                          : "Нет оценок"}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">
+                      {item.avg === null ? "н/д" : `${item.avg.toFixed(1)}/5`}
+                    </span>
+                  </div>
+
+                  <div className="relative mt-4 flex justify-center">
+                    <ChartContainer
+                      config={ratingChartConfig}
+                      className="h-40 w-full max-w-[160px] aspect-square"
+                    >
+                      <RadialBarChart
+                        data={chartData}
+                        startAngle={90}
+                        endAngle={-270}
+                        innerRadius="72%"
+                        outerRadius="100%"
+                        accessibilityLayer
+                      >
+                        <PolarAngleAxis
+                          type="number"
+                          domain={[0, 5]}
+                          tick={false}
+                        />
+                        <ChartTooltip
+                          cursor={false}
+                          content={
+                            <ChartTooltipContent
+                              hideLabel
+                              formatter={(tooltipValue, _name, tooltipItem) => (
+                                <div className="flex w-full items-center justify-between gap-3">
+                                  <span>{tooltipItem.payload?.label}</span>
+                                  <span className="font-medium tabular-nums">
+                                    {Number(tooltipValue).toFixed(1)}/5
+                                  </span>
+                                </div>
+                              )}
+                            />
+                          }
+                        />
+                        <RadialBar
+                          dataKey="value"
+                          background
+                          cornerRadius={12}
+                          clockWise
+                        />
+                      </RadialBarChart>
+                    </ChartContainer>
+
+                    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-3xl font-semibold tabular-nums">
+                        {item.avg === null ? "—" : item.avg.toFixed(1)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">из 5</span>
+                    </div>
+                  </div>
+
+                  <p className="mt-3 text-center text-xs text-muted-foreground">
+                    {item.label}
+                  </p>
                 </div>
-              ))}
-            </div>
-          </>
+              );
+            })}
+          </div>
         )}
       </CardContent>
     </Card>
