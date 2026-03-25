@@ -19,7 +19,6 @@ import {
   ItemDescription,
   ItemTitle,
 } from "@/components/ui/item";
-import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const StatisticCard = () => {

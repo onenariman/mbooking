@@ -65,7 +65,8 @@ export default function FeedbackRatingsChart({
       <CardHeader>
         <CardTitle>Средние оценки по вопросам</CardTitle>
         <CardDescription>
-          Средние значения по шкале от 1 до 5 за выбранный диапазон ({periodLabel}).
+          Средние значения по шкале от 1 до 5 за выбранный диапазон (
+          {periodLabel}).
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -153,7 +154,6 @@ export default function FeedbackRatingsChart({
                           dataKey="value"
                           background
                           cornerRadius={12}
-                          clockWise
                         />
                       </RadialBarChart>
                     </ChartContainer>
@@ -162,7 +162,9 @@ export default function FeedbackRatingsChart({
                       <span className="text-3xl font-semibold tabular-nums">
                         {item.avg === null ? "—" : item.avg.toFixed(1)}
                       </span>
-                      <span className="text-xs text-muted-foreground">из 5</span>
+                      <span className="text-xs text-muted-foreground">
+                        из 5
+                      </span>
                     </div>
                   </div>
 
