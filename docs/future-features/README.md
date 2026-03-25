@@ -6,6 +6,8 @@
 
 - `EMBEDDINGS_STRATEGY.md`
   - стратегия хранения и использования embeddings рядом с сырыми отзывами;
+- `FINE_TUNING_DATASET_STRATEGY.md`
+  - стратегия будущего fine-tuning на собственном и юридически более чистом датасете;
 - `PWA_PUSH_NOTIFICATIONS_PLAN.md`
   - продуктовый и архитектурный план внедрения push-уведомлений для `Home Screen web app`;
 - `PWA_PUSH_IMPLEMENTATION_DRAFT.md`

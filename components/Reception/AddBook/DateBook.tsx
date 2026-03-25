@@ -117,7 +117,7 @@ export default function DateBook({
             {labelText}
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="bg-white">
+        <PopoverContent align="start" className="w-fit">
           <Calendar
             mode="single"
             selected={selectedDate}
@@ -133,28 +133,32 @@ export default function DateBook({
           <div className="border-t pt-2 w-full">
             <div className="flex w-full items-end gap-2">
               <div className="flex flex-col items-center gap-y-1 w-fit">
-                <Label className="text-xs text-black/60">Начало</Label>
+                <Label className="text-xs text-muted-foreground">
+                  Начало
+                </Label>
                 <Input
                   type="time"
                   value={startTime}
                   onKeyDown={(e) => e.preventDefault()}
                   onChange={(e) => setStartTime(e.target.value)}
                   className={cn(
-                    "cursor-pointer text-black w-fit",
+                    "cursor-pointer w-fit",
                     (isPast || isInvalidRange) &&
                       "border-destructive text-destructive focus-visible:ring-destructive",
                   )}
                 />
               </div>
               <div className="flex flex-col items-center gap-y-1 w-fit">
-                <Label className="text-xs text-black/60">Конец</Label>
+                <Label className="text-xs text-muted-foreground">
+                  Конец
+                </Label>
                 <Input
                   type="time"
                   value={endTime}
                   onKeyDown={(e) => e.preventDefault()}
                   onChange={(e) => setEndTime(e.target.value)}
                   className={cn(
-                    "cursor-pointer text-black w-fit",
+                    "cursor-pointer w-fit",
                     isInvalidRange &&
                       "border-destructive text-destructive focus-visible:ring-destructive",
                   )}
