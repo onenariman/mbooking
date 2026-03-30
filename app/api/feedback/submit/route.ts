@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/src/utils/supabase/server";
+import { supabaseAdmin } from "@/src/utils/supabase/admin";
 import { submitFeedbackSchema } from "@/src/schemas/feedback/feedbackSchema";
-import { mapSupabaseError } from "@/src/helpers/getErrorMessage";
+import { getErrorMessage, mapSupabaseError } from "@/src/helpers/getErrorMessage";
 
 const toOptionalNumber = (value: number | null | undefined) =>
   value === null || value === undefined ? undefined : value;
@@ -13,9 +13,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Некорректные данные" }, { status: 400 });
   }
 
-  const supabase = await createClient();
+  const { data: tokenRow, error: tokenError } = await supabaseAdmin
+    .from("feedback_tokens")
+    .select("token")
+    .eq("token", parsed.data.token)
+    .maybeSingle();
 
-  const { data, error } = await supabase.rpc("submit_feedback", {
+  if (tokenError) {
+    return NextResponse.json({ message: mapSupabaseError(tokenError) }, { status: 500 });
+  }
+
+  if (!tokenRow) {
+    return NextResponse.json(
+      { message: "Invalid or expired token" },
+      { status: 400 },
+    );
+  }
+
+  const { data, error } = await supabaseAdmin.rpc("submit_feedback", {
     p_token: parsed.data.token,
     p_feedback_text: parsed.data.feedback_text,
     p_score_result: toOptionalNumber(parsed.data.score_result),
@@ -26,8 +41,34 @@ export async function POST(request: Request) {
   });
 
   if (error) {
+    const message = getErrorMessage(error);
+    if (
+      message.includes("Invalid or expired token") ||
+      message.includes("Feedback text too long")
+    ) {
+      return NextResponse.json({ message }, { status: 400 });
+    }
+
     return NextResponse.json({ message: mapSupabaseError(error) }, { status: 500 });
   }
 
-  return NextResponse.json({ data });
+  const { data: discountRow, error: discountError } = await supabaseAdmin
+    .from("client_discounts")
+    .select("discount_percent")
+    .eq("feedback_token", parsed.data.token)
+    .maybeSingle();
+
+  if (discountError) {
+    return NextResponse.json(
+      { message: mapSupabaseError(discountError) },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({
+    data: {
+      feedback_id: data,
+      discount_percent: discountRow?.discount_percent ?? null,
+    },
+  });
 }

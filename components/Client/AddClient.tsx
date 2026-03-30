@@ -7,6 +7,10 @@ import InputPhone from "../InputPhone";
 import Spinner from "../Spinner";
 
 import { formatNameInput } from "@/src/validators/formatNameInput";
+import {
+  formatPhoneDisplay,
+  normalizePhone,
+} from "@/src/validators/normalizePhone";
 import { useAddClient } from "@/src/hooks/clients.hooks";
 import { getErrorMessage } from "@/src/helpers/getErrorMessage";
 
@@ -45,10 +49,17 @@ const AddClient = () => {
       return;
     }
 
+    const phone = normalizePhone(clientPhone);
+
+    if (!phone) {
+      toast.error("Введите корректный номер телефона");
+      return;
+    }
+
     addClient(
       {
         name: name.trim(),
-        phone: `7${clientPhone}`, // ✅ формат для БД
+        phone,
       },
       {
         onSuccess: (data) => {
@@ -56,7 +67,7 @@ const AddClient = () => {
           setClientPhone("");
 
           toast("Клиент добавлен", {
-            description: `${data.name}, ${data.phone}`,
+            description: `${data.name}, ${formatPhoneDisplay(data.phone)}`,
           });
         },
         onError: (error) => {

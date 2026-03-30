@@ -16,21 +16,7 @@ import {
   UserX,
   XCircle,
 } from "lucide-react";
-import { isPastUtcIso } from "@/src/lib/time";
-import { formatPriceInput } from "@/src/validators/formatPriceInput";
-import { useUpdateAppointment } from "@/src/hooks/appointments.hooks";
-import { useCreateFeedbackToken } from "@/src/hooks/feedback.hooks";
-import {
-  ZodAppointment,
-  ZodAppointmentStatus,
-} from "@/src/schemas/books/bookSchema";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -38,31 +24,79 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
+import { getErrorMessage } from "@/src/helpers/getErrorMessage";
+import {
+  useCompleteAppointment,
+  useUpdateAppointment,
+} from "@/src/hooks/appointments.hooks";
+import { useDiscounts } from "@/src/hooks/discounts.hooks";
+import { useCreateFeedbackToken } from "@/src/hooks/feedback.hooks";
+import { isPastUtcIso } from "@/src/lib/time";
+import {
+  ZodAppointment,
+  ZodAppointmentStatus,
+} from "@/src/schemas/books/bookSchema";
+import { formatPriceInput } from "@/src/validators/formatPriceInput";
+import { normalizePhone } from "@/src/validators/normalizePhone";
 import { DeleteBook } from "./DeleteBook";
 import { EditBook } from "./EditBook";
-import { getErrorMessage } from "@/src/helpers/getErrorMessage";
 
 interface DropdownMenuBookProps {
   book: ZodAppointment;
 }
+
+const parsePriceInput = (value: string) => {
+  const normalized = value.replace(/\s/g, "");
+
+  if (!normalized) {
+    return null;
+  }
+
+  const parsed = Number(normalized);
+  return Number.isNaN(parsed) ? null : parsed;
+};
 
 export default function DropdownMenuBook({ book }: DropdownMenuBookProps) {
   const [showEdit, setShowEdit] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [finalAmount, setFinalAmount] = useState(book.amount?.toString() || "");
+  const [serviceAmount, setServiceAmount] = useState(
+    book.service_amount?.toString() || book.amount?.toString() || "",
+  );
+  const [extraAmount, setExtraAmount] = useState(
+    book.extra_amount?.toString() || "",
+  );
 
-  const { mutateAsync: updateAppointment, isPending } = useUpdateAppointment();
+  const { mutateAsync: updateAppointment, isPending: isUpdatingAppointment } =
+    useUpdateAppointment();
+  const { mutateAsync: completeAppointment, isPending: isCompletingAppointment } =
+    useCompleteAppointment();
   const { mutateAsync: createFeedbackToken, isPending: isCreatingToken } =
     useCreateFeedbackToken();
+  const { data: activeDiscounts = [] } = useDiscounts({
+    phone: book.applied_discount_id ? book.client_phone : null,
+    isUsed: false,
+  });
 
   const isPast = book.appointment_at ? isPastUtcIso(book.appointment_at) : false;
-  const phone = book.client_phone;
-  const whatsappPhone = phone.replace(/\D/g, "");
+  const rawPhone = book.client_phone;
+  const normalizedPhone = normalizePhone(rawPhone);
+  const phone = normalizedPhone || rawPhone.trim();
+  const whatsappPhone = normalizedPhone || rawPhone.replace(/\D/g, "");
+  const appliedDiscount =
+    activeDiscounts.find((discount) => discount.id === book.applied_discount_id) ??
+    null;
 
   const reminderMessageText = useMemo(() => {
     if (!book.appointment_at) {
@@ -73,13 +107,24 @@ export default function DropdownMenuBook({ book }: DropdownMenuBookProps) {
       locale: ru,
     });
 
-    return `Мумина Эксперт\n\nПривет. Напоминаю о записи на ${formatted}\n\nСообщение сгенерировано автоматически.`;
+    return `Муминa Эксперт\n\nПривет. Напоминаю о записи на ${formatted}\n\nСообщение сгенерировано автоматически.`;
   }, [book.appointment_at]);
 
   const encodedReminderMessage = encodeURIComponent(reminderMessageText);
-
   const canComplete = isPast && book.status !== "completed";
   const canSetNoShow = isPast && book.status !== "no_show";
+  const isUpdatingStatus = isUpdatingAppointment || isCompletingAppointment;
+
+  const serviceAmountNumber = parsePriceInput(serviceAmount);
+  const extraAmountNumber = parsePriceInput(extraAmount) ?? 0;
+  const previewDiscountAmount =
+    appliedDiscount && serviceAmountNumber !== null
+      ? Math.round((serviceAmountNumber * appliedDiscount.discount_percent) / 100)
+      : null;
+  const previewFinalAmount =
+    appliedDiscount && serviceAmountNumber !== null && previewDiscountAmount !== null
+      ? Math.max(serviceAmountNumber - previewDiscountAmount, 0) + extraAmountNumber
+      : null;
 
   const handleChangeStatus = async (status: ZodAppointmentStatus) => {
     if (status === book.status) {
@@ -95,27 +140,67 @@ export default function DropdownMenuBook({ book }: DropdownMenuBookProps) {
   };
 
   const handleComplete = async () => {
-    const normalized = finalAmount.replace(/\s/g, "");
-    const numericAmount = Number(normalized);
-
-    if (!normalized || Number.isNaN(numericAmount)) {
-      toast.error("Введите корректную сумму");
-      return;
-    }
-
     try {
-      await updateAppointment({
-        id: book.id,
-        updates: {
-          status: "completed",
-          amount: numericAmount,
-        },
-      });
+      const result = await (book.applied_discount_id
+        ? appliedDiscount
+          ? (() => {
+              if (serviceAmountNumber === null) {
+                toast.error("Введите стоимость услуги");
+                return null;
+              }
 
-      toast.success("Запись успешно завершена");
+              return completeAppointment({
+                id: book.id,
+                extra_amount: extraAmountNumber,
+                service_amount: serviceAmountNumber,
+              });
+            })()
+          : (() => {
+              const numericAmount = parsePriceInput(finalAmount);
+
+              if (numericAmount === null) {
+                toast.error("Введите итоговую стоимость");
+                return null;
+              }
+
+              return completeAppointment({
+                id: book.id,
+                amount: numericAmount,
+                ignore_discount: true,
+              });
+            })()
+        : (() => {
+            const numericAmount = parsePriceInput(finalAmount);
+
+            if (numericAmount === null) {
+              toast.error("Введите итоговую стоимость");
+              return null;
+            }
+
+            return completeAppointment({
+              id: book.id,
+              amount: numericAmount,
+            });
+          })());
+
+      if (!result) {
+        return;
+      }
+
       setShowCompleteDialog(false);
-    } catch {
-      toast.error("Ошибка при сохранении суммы");
+
+      try {
+        await navigator.clipboard.writeText(result.feedback_url);
+        toast.success("Запись успешно завершена", {
+          description: "Ссылка на отзыв скопирована в буфер обмена",
+        });
+      } catch {
+        toast.success("Запись успешно завершена", {
+          description: result.feedback_url,
+        });
+      }
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Ошибка завершения записи"));
     }
   };
 
@@ -146,7 +231,7 @@ export default function DropdownMenuBook({ book }: DropdownMenuBookProps) {
       }
 
       if (phone.trim()) {
-        window.location.href = `sms:${phone}?&body=${encodedFeedbackMessage}`;
+        window.location.assign(`sms:${phone}?&body=${encodedFeedbackMessage}`);
         toast.success("Ссылка на отзыв добавлена в SMS");
         return;
       }
@@ -170,7 +255,7 @@ export default function DropdownMenuBook({ book }: DropdownMenuBookProps) {
         <DropdownMenuContent align="end" className="w-60">
           <DropdownMenuItem
             onClick={() => setShowCompleteDialog(true)}
-            disabled={isPending || !canComplete}
+            disabled={isUpdatingStatus || !canComplete}
           >
             <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
             Завершить...
@@ -178,7 +263,7 @@ export default function DropdownMenuBook({ book }: DropdownMenuBookProps) {
 
           <DropdownMenuItem
             onClick={() => handleChangeStatus("cancelled")}
-            disabled={isPending || book.status === "cancelled"}
+            disabled={isUpdatingStatus || book.status === "cancelled"}
           >
             <XCircle className="mr-2 h-4 w-4 text-orange-500" />
             Отменить
@@ -186,7 +271,7 @@ export default function DropdownMenuBook({ book }: DropdownMenuBookProps) {
 
           <DropdownMenuItem
             onClick={() => handleChangeStatus("no_show")}
-            disabled={isPending || !canSetNoShow}
+            disabled={isUpdatingStatus || !canSetNoShow}
           >
             <UserX className="mr-2 h-4 w-4 text-red-500" />
             Не пришел
@@ -255,38 +340,152 @@ export default function DropdownMenuBook({ book }: DropdownMenuBookProps) {
       </DropdownMenu>
 
       <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
-        <DialogContent className="max-w-[350px] rounded-2xl">
+        <DialogContent className="max-w-[380px] rounded-2xl">
           <DialogHeader>
             <DialogTitle>Завершение процедуры</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3 py-4">
-            <div className="space-y-1.5">
-              <Label
-                htmlFor="amount"
-                className="text-xs font-bold uppercase text-muted-foreground"
-              >
-                Итоговая стоимость (₽)
-              </Label>
-              <Input
-                id="amount"
-                type="text"
-                inputMode="numeric"
-                value={finalAmount}
-                onChange={(event) =>
-                  setFinalAmount(formatPriceInput(event.target.value))
-                }
-                placeholder="0"
-                className="text-lg font-semibold"
-              />
-            </div>
+
+          <div className="space-y-4 py-4">
+            {book.applied_discount_id ? (
+              appliedDiscount ? (
+                <>
+                  <div className="rounded-2xl border bg-muted/40 p-3 text-sm">
+                    <p className="font-semibold">
+                      Применится скидка {appliedDiscount.discount_percent}%
+                    </p>
+                    <p className="mt-1 text-muted-foreground">
+                      Скидка считается только от стоимости услуги. Товары и
+                      расходники вводятся отдельно.
+                    </p>
+                    {appliedDiscount.note ? (
+                      <p className="mt-2 text-muted-foreground">
+                        Комментарий: {appliedDiscount.note}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor="service-amount"
+                      className="text-xs font-bold uppercase text-muted-foreground"
+                    >
+                      Стоимость услуги (₽)
+                    </Label>
+                    <Input
+                      id="service-amount"
+                      type="text"
+                      inputMode="numeric"
+                      value={serviceAmount}
+                      onChange={(event) =>
+                        setServiceAmount(formatPriceInput(event.target.value))
+                      }
+                      placeholder="0"
+                      className="text-lg font-semibold"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor="extra-amount"
+                      className="text-xs font-bold uppercase text-muted-foreground"
+                    >
+                      Товары и расходники (₽)
+                    </Label>
+                    <Input
+                      id="extra-amount"
+                      type="text"
+                      inputMode="numeric"
+                      value={extraAmount}
+                      onChange={(event) =>
+                        setExtraAmount(formatPriceInput(event.target.value))
+                      }
+                      placeholder="0"
+                    />
+                  </div>
+
+                  <div className="rounded-2xl border p-3 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Скидка</span>
+                      <span>
+                        {previewDiscountAmount !== null
+                          ? `-${previewDiscountAmount} ₽`
+                          : "—"}
+                      </span>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between font-semibold">
+                      <span>К оплате</span>
+                      <span>
+                        {previewFinalAmount !== null
+                          ? `${previewFinalAmount} ₽`
+                          : "—"}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="rounded-2xl border border-orange-300 bg-orange-50 p-3 text-sm text-orange-900">
+                    Выбранная скидка больше недоступна. Визит можно завершить без
+                    нее по итоговой стоимости.
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor="amount"
+                      className="text-xs font-bold uppercase text-muted-foreground"
+                    >
+                      Итоговая стоимость (₽)
+                    </Label>
+                    <Input
+                      id="amount"
+                      type="text"
+                      inputMode="numeric"
+                      value={finalAmount}
+                      onChange={(event) =>
+                        setFinalAmount(formatPriceInput(event.target.value))
+                      }
+                      placeholder="0"
+                      className="text-lg font-semibold"
+                    />
+                  </div>
+                </>
+              )
+            ) : (
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="amount"
+                  className="text-xs font-bold uppercase text-muted-foreground"
+                >
+                  Итоговая стоимость (₽)
+                </Label>
+                <Input
+                  id="amount"
+                  type="text"
+                  inputMode="numeric"
+                  value={finalAmount}
+                  onChange={(event) =>
+                    setFinalAmount(formatPriceInput(event.target.value))
+                  }
+                  placeholder="0"
+                  className="text-lg font-semibold"
+                />
+              </div>
+            )}
           </div>
+
           <DialogFooter>
             <Button
               onClick={handleComplete}
-              disabled={isPending}
+              disabled={isUpdatingStatus}
               className="w-full rounded-xl"
             >
-              {isPending ? <Spinner className="mr-2" /> : "Подтвердить доход"}
+              {isCompletingAppointment ? (
+                <Spinner className="mr-2" />
+              ) : book.applied_discount_id && !appliedDiscount ? (
+                "Завершить без скидки"
+              ) : (
+                "Подтвердить доход"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

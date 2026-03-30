@@ -6,6 +6,11 @@ import {
   updateAppointment,
 } from "../api/receptions.api";
 import {
+  completeAppointment,
+  CompleteAppointmentPayload,
+  CompleteAppointmentResult,
+} from "../api/appointments.api";
+import {
   AppointmentArraySchema,
   createAppointmentSchema,
   ZodAppointment,
@@ -75,6 +80,19 @@ export const useUpdateAppointment = () => {
   return useMutation({
     mutationFn: ({ id, updates }: UpdateAppointmentPayload) =>
       updateAppointment(id, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: APPOINTMENTS_QUERY_KEY });
+    },
+  });
+};
+
+export const useCompleteAppointment = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (
+      payload: CompleteAppointmentPayload,
+    ): Promise<CompleteAppointmentResult> => completeAppointment(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: APPOINTMENTS_QUERY_KEY });
     },

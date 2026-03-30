@@ -1,6 +1,7 @@
 "use client";
 import { ZodClient } from "@/src/schemas/clients/clientSchema";
 import { useDeleteClient } from "@/src/hooks/clients.hooks";
+import { formatPhoneDisplay } from "@/src/validators/normalizePhone";
 
 import { toast } from "sonner";
 import { DropdownMenuClient } from "./DropdownMenuClient";
@@ -21,6 +22,9 @@ const ItemClient = ({ client }: ItemProps) => {
     <div className="w-full flex items-center justify-between">
       <div className="flex flex-col items-start gap-y-2">
         <p className="text-md font-semibold">{client.name}</p>
+        <p className="text-sm text-muted-foreground">
+          {formatPhoneDisplay(client.phone)}
+        </p>
       </div>
       <div>
         <DropdownMenuClient client={client} onDelete={handleDelete} />

@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
-import { ZodService } from "@/src/schemas/services/serviceSchema";
-import { cn } from "@/src/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -18,16 +16,21 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { cn } from "@/src/lib/utils";
+import { ZodService } from "@/src/schemas/services/serviceSchema";
 
 interface SearchServiceProps {
   services: ZodService[];
+  selectedServiceId?: string | null;
   getService: (service: ZodService) => void;
 }
 
-const SearchService = ({ services, getService }: SearchServiceProps) => {
+const SearchService = ({
+  services,
+  selectedServiceId = null,
+  getService,
+}: SearchServiceProps) => {
   const [open, setOpen] = useState(false);
-  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
-
   const selectedService = services.find((service) => service.id === selectedServiceId);
 
   return (
@@ -36,7 +39,6 @@ const SearchService = ({ services, getService }: SearchServiceProps) => {
         <Button
           variant="outline"
           role="combobox"
-          aria-expanded={open}
           className="w-full justify-between"
         >
           {selectedService ? selectedService.name : "Выберите услугу..."}
@@ -62,7 +64,6 @@ const SearchService = ({ services, getService }: SearchServiceProps) => {
                   key={service.id}
                   value={service.name}
                   onSelect={() => {
-                    setSelectedServiceId(service.id);
                     getService(service);
                     setOpen(false);
                   }}
@@ -85,4 +86,3 @@ const SearchService = ({ services, getService }: SearchServiceProps) => {
 };
 
 export default SearchService;
-

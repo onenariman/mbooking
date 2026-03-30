@@ -1,4 +1,12 @@
 import { z } from "zod";
+import { normalizePhone } from "@/src/validators/normalizePhone";
+
+const clientPhoneInputSchema = z.preprocess(
+  (value) => (typeof value === "string" ? normalizePhone(value) : value),
+  z
+    .string()
+    .regex(/^7\d{10}$/, "Телефон должен быть в формате 7XXXXXXXXXX"),
+);
 
 export const clientSchema = z.object({
   id: z.string(),
@@ -16,9 +24,7 @@ export const clientSchema = z.object({
 
 export const clientInputSchema = z.object({
   name: clientSchema.shape.name,
-  phone: z
-    .string()
-    .regex(/^7\d{10}$/, "Телефон должен быть в формате 7XXXXXXXXXX"),
+  phone: clientPhoneInputSchema,
 });
 
 export const ClientArraySchema = z.array(clientSchema);

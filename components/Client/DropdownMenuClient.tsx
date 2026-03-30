@@ -1,26 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
   Edit2Icon,
   EllipsisVertical,
   MessageCircle,
+  Percent,
   Phone,
   Send,
   Trash2,
 } from "lucide-react";
-import { ZodClient } from "@/src/schemas/clients/clientSchema";
-import { useCreateFeedbackToken } from "@/src/hooks/feedback.hooks";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -29,8 +21,33 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { EditClient } from "./EditClient";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { getErrorMessage } from "@/src/helpers/getErrorMessage";
+import { useCreateDiscount } from "@/src/hooks/discounts.hooks";
+import { useCreateFeedbackToken } from "@/src/hooks/feedback.hooks";
+import { useServices } from "@/src/hooks/services.hook";
+import { ZodClient } from "@/src/schemas/clients/clientSchema";
+import {
+  formatPhoneDisplay,
+  normalizePhone,
+} from "@/src/validators/normalizePhone";
+import { EditClient } from "./EditClient";
 
 export function DropdownMenuClient({
   client,
@@ -39,14 +56,33 @@ export function DropdownMenuClient({
   client: ZodClient;
   onDelete: () => Promise<void>;
 }) {
-  const [showEdit, setShowEdit] = useState(false);
+  const [showCreateDiscount, setShowCreateDiscount] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [discountPercent, setDiscountPercent] = useState("");
+  const [discountNote, setDiscountNote] = useState("");
+  const [discountServiceId, setDiscountServiceId] = useState<string | null>(null);
+  const { data: services = [] } = useServices();
+  const { mutateAsync: createDiscount, isPending: isCreatingDiscount } =
+    useCreateDiscount();
   const { mutateAsync: createFeedbackToken, isPending: isCreatingToken } =
     useCreateFeedbackToken();
 
-  const phone = client.phone ?? "";
-  const whatsappPhone = phone.replace(/\D/g, "");
+  const rawPhone = client.phone ?? "";
+  const normalizedPhone = normalizePhone(rawPhone);
+  const phone = normalizedPhone || rawPhone.trim();
+  const whatsappPhone = normalizedPhone || rawPhone.replace(/\D/g, "");
+  const formattedPhone = phone ? formatPhoneDisplay(phone) : rawPhone;
+  const selectedServiceName = useMemo(() => {
+    return services.find((service) => service.id === discountServiceId)?.name ?? null;
+  }, [discountServiceId, services]);
+
+  const resetDiscountForm = () => {
+    setDiscountPercent("");
+    setDiscountNote("");
+    setDiscountServiceId(null);
+  };
 
   const handleSendFeedback = async () => {
     try {
@@ -75,7 +111,7 @@ export function DropdownMenuClient({
       }
 
       if (phone.trim()) {
-        window.location.href = `sms:${phone}?&body=${encodedFeedbackMessage}`;
+        window.location.assign(`sms:${phone}?&body=${encodedFeedbackMessage}`);
         toast.success("Ссылка на отзыв добавлена в SMS");
         return;
       }
@@ -84,6 +120,43 @@ export function DropdownMenuClient({
       toast.success("Ссылка на отзыв скопирована");
     } catch (error) {
       toast.error(getErrorMessage(error, "Ошибка отправки ссылки"));
+    }
+  };
+
+  const handleCreateDiscount = async () => {
+    const parsedPercent = Number(discountPercent);
+
+    if (!phone) {
+      toast.error("У клиента нет корректного номера телефона");
+      return;
+    }
+
+    if (!discountServiceId) {
+      toast.error("Выберите услугу для скидки");
+      return;
+    }
+
+    if (!Number.isInteger(parsedPercent) || parsedPercent < 1 || parsedPercent > 100) {
+      toast.error("Введите скидку от 1 до 100%");
+      return;
+    }
+
+    try {
+      await createDiscount({
+        client_phone: phone,
+        discount_percent: parsedPercent,
+        service_id: discountServiceId,
+        note: discountNote.trim() || null,
+      });
+      toast.success(
+        selectedServiceName
+          ? `Скидка назначена на услугу "${selectedServiceName}"`
+          : "Скидка назначена клиенту",
+      );
+      resetDiscountForm();
+      setShowCreateDiscount(false);
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Не удалось назначить скидку"));
     }
   };
 
@@ -129,6 +202,13 @@ export function DropdownMenuClient({
             <Send className="mr-2 h-4 w-4 text-foreground" />
             Отзыв
           </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => setShowCreateDiscount(true)}
+            disabled={!phone}
+          >
+            <Percent className="mr-2 h-4 w-4 text-orange-500" />
+            Назначить скидку
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setShowEdit(true)}>
             <Edit2Icon className="mr-2 h-4 w-4 text-blue-500" />
@@ -143,6 +223,83 @@ export function DropdownMenuClient({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <Dialog
+        open={showCreateDiscount}
+        onOpenChange={(open) => {
+          setShowCreateDiscount(open);
+          if (!open) {
+            resetDiscountForm();
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Назначить скидку</DialogTitle>
+            <DialogDescription>
+              Скидка привяжется к клиенту {formattedPhone} и к конкретной услуге.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="discount-service">Услуга</Label>
+              <Select
+                value={discountServiceId ?? undefined}
+                onValueChange={setDiscountServiceId}
+              >
+                <SelectTrigger id="discount-service" className="w-full">
+                  <SelectValue placeholder="Выберите услугу" />
+                </SelectTrigger>
+                <SelectContent>
+                  {services.map((service) => (
+                    <SelectItem key={service.id} value={service.id}>
+                      {service.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="discount-percent">Скидка, %</Label>
+              <Input
+                id="discount-percent"
+                inputMode="numeric"
+                maxLength={3}
+                placeholder="Например, 10"
+                value={discountPercent}
+                onChange={(event) =>
+                  setDiscountPercent(event.target.value.replace(/\D/g, "").slice(0, 3))
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="discount-note">Комментарий</Label>
+              <Textarea
+                id="discount-note"
+                placeholder="Например, лояльность или компенсация"
+                value={discountNote}
+                onChange={(event) => setDiscountNote(event.target.value)}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowCreateDiscount(false)}
+              disabled={isCreatingDiscount}
+            >
+              Отмена
+            </Button>
+            <Button onClick={handleCreateDiscount} disabled={isCreatingDiscount}>
+              {isCreatingDiscount ? "Сохраняем..." : "Назначить"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showDelete} onOpenChange={setShowDelete}>
         <DialogContent>

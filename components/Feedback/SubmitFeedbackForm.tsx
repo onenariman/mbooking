@@ -8,7 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
-import { useSubmitFeedback } from "@/src/hooks/feedback.hooks";
+import {
+  useSubmitFeedback,
+  useValidateFeedbackToken,
+} from "@/src/hooks/feedback.hooks";
 import Quizle from "@/components/Feedback/Quizle";
 import { getErrorMessage } from "@/src/helpers/getErrorMessage";
 
@@ -91,6 +94,12 @@ export default function SubmitFeedbackForm({ token }: SubmitFeedbackFormProps) {
   const [ratings, setRatings] = useState(buildInitialRatings);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const { mutateAsync: submitFeedback, isPending } = useSubmitFeedback();
+  const {
+    data: tokenValidation,
+    isLoading: isTokenValidationLoading,
+    isError: isTokenValidationError,
+  } = useValidateFeedbackToken(token);
+  const isTokenValid = tokenValidation?.valid ?? false;
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -158,13 +167,13 @@ export default function SubmitFeedbackForm({ token }: SubmitFeedbackFormProps) {
       return;
     }
 
-    if (!token) {
+    if (!token || !isTokenValid) {
       toast.error("Некорректная ссылка отзыва");
       return;
     }
 
     try {
-      await submitFeedback({
+      const result = await submitFeedback({
         token,
         feedback_text: feedbackText,
         score_result: ratings.score_result ?? null,
@@ -174,7 +183,11 @@ export default function SubmitFeedbackForm({ token }: SubmitFeedbackFormProps) {
         score_recommendation: ratings.score_recommendation ?? null,
       });
       setIsSubmitted(true);
-      toast.success("Спасибо, отзыв отправлен");
+      toast.success(
+        result.discount_percent
+          ? `Спасибо, отзыв отправлен. Скидка ${result.discount_percent}% начислена`
+          : "Спасибо, отзыв отправлен",
+      );
     } catch (error) {
       const message = getErrorMessage(error, "Ошибка отправки");
       if (message.includes("Invalid or expired token")) {
@@ -213,11 +226,26 @@ export default function SubmitFeedbackForm({ token }: SubmitFeedbackFormProps) {
         <CardTitle>Анонимный отзыв</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {isSubmitted ? (
+        {isTokenValidationLoading ? (
+          <div className="flex items-center justify-center rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+            <Spinner className="mr-2" />
+            Проверяем ссылку...
+          </div>
+        ) : null}
+
+        {!isTokenValidationLoading && (isTokenValidationError || !isTokenValid) ? (
+          <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+            Ссылка уже использована, истекла или недействительна.
+          </div>
+        ) : null}
+
+        {!isTokenValidationLoading && !isTokenValidationError && isTokenValid && isSubmitted ? (
           <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
             Отзыв получен. Эта ссылка больше не активна.
           </div>
-        ) : (
+        ) : null}
+
+        {!isTokenValidationLoading && !isTokenValidationError && isTokenValid && !isSubmitted ? (
           <>
             <Quizle
               questions={ratingQuestions}
@@ -279,7 +307,11 @@ export default function SubmitFeedbackForm({ token }: SubmitFeedbackFormProps) {
             <Button
               onClick={handleSubmit}
               disabled={
-                isPending || isListening || feedbackText.trim().length < 5 || !token
+                isPending ||
+                isListening ||
+                feedbackText.trim().length < 5 ||
+                !token ||
+                !isTokenValid
               }
               className="w-full"
             >
@@ -287,7 +319,7 @@ export default function SubmitFeedbackForm({ token }: SubmitFeedbackFormProps) {
               Отправить отзыв
             </Button>
           </>
-        )}
+        ) : null}
       </CardContent>
     </Card>
   );

@@ -18,6 +18,10 @@ import { toast } from "sonner";
 import InputPhone from "../InputPhone";
 import { ZodClient } from "@/src/schemas/clients/clientSchema";
 import { useUpdateClient } from "@/src/hooks/clients.hooks";
+import {
+  formatPhoneDisplay,
+  normalizePhone,
+} from "@/src/validators/normalizePhone";
 
 export function EditClient({
   client,
@@ -29,12 +33,13 @@ export function EditClient({
   onOpenChange: (open: boolean) => void;
 }) {
   const { mutateAsync, isPending } = useUpdateClient();
+  const normalizedInitialPhone = normalizePhone(client.phone ?? "");
 
   const [name, setName] = useState(client.name ?? "");
   const [phone, setPhone] = useState(
-    client.phone?.startsWith("7")
-      ? client.phone.slice(1)
-      : (client.phone ?? ""),
+    normalizedInitialPhone
+      ? normalizedInitialPhone.slice(1)
+      : (client.phone ?? "").replace(/\D/g, "").slice(-10),
   );
   const [localError, setLocalError] = useState("");
 
@@ -45,17 +50,24 @@ export function EditClient({
     }
 
     try {
+      const normalizedPhone = normalizePhone(phone);
+
+      if (!normalizedPhone) {
+        setLocalError("Введите корректный номер телефона");
+        return;
+      }
+
       await mutateAsync({
         id: client.id,
         updates: {
           name: name.trim(),
-          phone: `7${phone}`,
+          phone: normalizedPhone,
         },
       });
 
       onOpenChange(false);
       toast.success("Данные обновлены", {
-        description: `Клиент ${name} успешно изменён`,
+        description: `Клиент ${name.trim()} обновлен, ${formatPhoneDisplay(normalizedPhone)}`,
       });
     } catch {
       toast.error("Ошибка при сохранении");

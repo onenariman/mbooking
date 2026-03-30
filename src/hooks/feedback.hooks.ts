@@ -9,6 +9,7 @@ import {
   GenerateRecommendationsPayload,
   generateRecommendations,
   submitFeedback,
+  validateFeedbackToken,
 } from "@/src/api/feedback.api";
 import {
   aiRecommendationArraySchema,
@@ -23,6 +24,7 @@ import { QUERY_OPTIONS } from "@/src/lib/queryConfig";
 const RECOMMENDATIONS_QUERY_KEY = ["ai-recommendations"] as const;
 const RATINGS_QUERY_KEY = ["feedback-ratings"] as const;
 const FEEDBACK_QUERY_KEY = ["feedback-responses"] as const;
+const FEEDBACK_TOKEN_QUERY_KEY = ["feedback-token"] as const;
 
 export const useRecommendations = (from: string | null, to: string | null) => {
   return useQuery({
@@ -83,6 +85,16 @@ export const useFeedbackResponses = (from: string | null, to: string | null) => 
 export const useCreateFeedbackToken = () => {
   return useMutation({
     mutationFn: (expiresIn?: string) => createFeedbackToken(expiresIn),
+  });
+};
+
+export const useValidateFeedbackToken = (token: string) => {
+  return useQuery({
+    queryKey: [...FEEDBACK_TOKEN_QUERY_KEY, token],
+    queryFn: () => validateFeedbackToken(token),
+    enabled: Boolean(token),
+    retry: false,
+    ...QUERY_OPTIONS.feedback,
   });
 };
 

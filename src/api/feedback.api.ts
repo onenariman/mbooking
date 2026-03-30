@@ -12,6 +12,16 @@ export type FeedbackRatingsTrend = {
   sampleSize: number;
 };
 
+export type FeedbackTokenValidationResult = {
+  valid: boolean;
+  appointment_id: string | null;
+};
+
+export type SubmitFeedbackResult = {
+  feedback_id: string;
+  discount_percent: number | null;
+};
+
 export const createFeedbackToken = async (expiresIn = "14 days") => {
   const response = await fetch("/api/feedback/token", {
     method: "POST",
@@ -31,14 +41,36 @@ export const createFeedbackToken = async (expiresIn = "14 days") => {
   return payload.data;
 };
 
-export const submitFeedback = async (payload: ZodSubmitFeedback) => {
+export const validateFeedbackToken = async (
+  token: string,
+): Promise<FeedbackTokenValidationResult> => {
+  const params = new URLSearchParams({ token });
+  const response = await fetch(`/api/feedback/validate?${params.toString()}`, {
+    method: "GET",
+  });
+  const payload = (await response.json()) as {
+    data?: FeedbackTokenValidationResult;
+    message?: string;
+  };
+  if (!response.ok) {
+    throw new Error(payload.message || "Не удалось проверить token");
+  }
+  if (!payload.data) {
+    throw new Error("Ответ сервера не содержит данных");
+  }
+  return payload.data;
+};
+
+export const submitFeedback = async (
+  payload: ZodSubmitFeedback,
+): Promise<SubmitFeedbackResult> => {
   const response = await fetch("/api/feedback/submit", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   const responsePayload = (await response.json()) as {
-    data?: string;
+    data?: SubmitFeedbackResult;
     message?: string;
   };
   if (!response.ok) {

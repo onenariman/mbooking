@@ -76,51 +76,81 @@ export type Database = {
           },
         ];
       };
-      appointments: {
-        Row: {
-          amount: number | null;
-          appointment_at: string | null;
-          appointment_end: string | null;
-          category_name: string;
-          client_name: string;
-          client_phone: string;
-          created_at: string;
-          id: string;
-          notes: string | null;
-          service_name: string;
-          status: string;
-          user_id: string;
-        };
+        appointments: {
+          Row: {
+            applied_discount_id: string | null;
+            amount: number | null;
+            appointment_at: string | null;
+            appointment_end: string | null;
+            category_name: string;
+            client_name: string;
+            client_phone: string;
+            created_at: string;
+            discount_amount: number | null;
+            extra_amount: number | null;
+            id: string;
+            notes: string | null;
+            service_id: string | null;
+            service_name: string;
+            service_amount: number | null;
+            status: string;
+            user_id: string;
+          };
         Insert: {
+          applied_discount_id?: string | null;
           amount?: number | null;
           appointment_at?: string | null;
           appointment_end?: string | null;
           category_name: string;
           client_name: string;
           client_phone: string;
-          created_at?: string;
-          id?: string;
-          notes?: string | null;
-          service_name: string;
-          status: string;
-          user_id?: string;
-        };
+            created_at?: string;
+            discount_amount?: number | null;
+            extra_amount?: number | null;
+            id?: string;
+            notes?: string | null;
+            service_id?: string | null;
+            service_name: string;
+            service_amount?: number | null;
+            status: string;
+            user_id?: string;
+          };
         Update: {
+          applied_discount_id?: string | null;
           amount?: number | null;
           appointment_at?: string | null;
           appointment_end?: string | null;
           category_name?: string;
           client_name?: string;
           client_phone?: string;
-          created_at?: string;
-          id?: string;
-          notes?: string | null;
-          service_name?: string;
-          status?: string;
-          user_id?: string;
+            created_at?: string;
+            discount_amount?: number | null;
+            extra_amount?: number | null;
+            id?: string;
+            notes?: string | null;
+            service_id?: string | null;
+            service_name?: string;
+            service_amount?: number | null;
+            status?: string;
+            user_id?: string;
+          };
+        Relationships: [
+            {
+              foreignKeyName: "appointments_applied_discount_id_fkey";
+              columns: ["applied_discount_id"];
+              isOneToOne: false;
+              referencedRelation: "client_discounts";
+              referencedColumns: ["id"];
+            },
+            {
+              foreignKeyName: "appointments_service_id_fkey";
+              columns: ["service_id"];
+              isOneToOne: false;
+              referencedRelation: "services";
+              referencedColumns: ["id"];
+            },
+          ];
         };
-        Relationships: [];
-      };
       categories: {
         Row: {
           category_name: string;
@@ -139,6 +169,199 @@ export type Database = {
           created_at?: string;
           id?: string;
           user_id?: string;
+        };
+        Relationships: [];
+      };
+        client_discounts: {
+          Row: {
+            appointment_id: string | null;
+            client_phone: string;
+            created_at: string;
+            discount_percent: number;
+            expires_at: string | null;
+            feedback_token: string | null;
+            id: string;
+            is_used: boolean;
+            note: string | null;
+            reserved_at: string | null;
+            reserved_for_appointment_id: string | null;
+            service_id: string | null;
+            service_name_snapshot: string | null;
+            source_type: string;
+            used_at: string | null;
+            used_on_appointment_id: string | null;
+            user_id: string;
+          };
+        Insert: {
+          appointment_id?: string | null;
+          client_phone: string;
+          created_at?: string;
+          discount_percent?: number;
+          expires_at?: string | null;
+            feedback_token?: string | null;
+            id?: string;
+            is_used?: boolean;
+            note?: string | null;
+            reserved_at?: string | null;
+            reserved_for_appointment_id?: string | null;
+            service_id?: string | null;
+            service_name_snapshot?: string | null;
+            source_type?: string;
+            used_at?: string | null;
+            used_on_appointment_id?: string | null;
+            user_id: string;
+          };
+        Update: {
+          appointment_id?: string | null;
+          client_phone?: string;
+          created_at?: string;
+          discount_percent?: number;
+          expires_at?: string | null;
+            feedback_token?: string | null;
+            id?: string;
+            is_used?: boolean;
+            note?: string | null;
+            reserved_at?: string | null;
+            reserved_for_appointment_id?: string | null;
+            service_id?: string | null;
+            service_name_snapshot?: string | null;
+            source_type?: string;
+            used_at?: string | null;
+            used_on_appointment_id?: string | null;
+            user_id?: string;
+          };
+        Relationships: [
+          {
+            foreignKeyName: "client_discounts_appointment_id_fkey";
+            columns: ["appointment_id"];
+            isOneToOne: false;
+            referencedRelation: "appointments";
+            referencedColumns: ["id"];
+          },
+            {
+              foreignKeyName: "client_discounts_reserved_for_appointment_id_fkey";
+              columns: ["reserved_for_appointment_id"];
+              isOneToOne: false;
+              referencedRelation: "appointments";
+              referencedColumns: ["id"];
+            },
+            {
+              foreignKeyName: "client_discounts_service_id_fkey";
+              columns: ["service_id"];
+              isOneToOne: false;
+              referencedRelation: "services";
+              referencedColumns: ["id"];
+            },
+            {
+              foreignKeyName: "client_discounts_used_on_appointment_id_fkey";
+              columns: ["used_on_appointment_id"];
+              isOneToOne: false;
+            referencedRelation: "appointments";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      client_portal_invites: {
+        Row: {
+          client_phone: string;
+          created_at: string;
+          created_by: string;
+          expires_at: string;
+          id: string;
+          owner_user_id: string;
+          purpose: string;
+          token_hash: string;
+          used_at: string | null;
+        };
+        Insert: {
+          client_phone: string;
+          created_at?: string;
+          created_by: string;
+          expires_at: string;
+          id?: string;
+          owner_user_id: string;
+          purpose: string;
+          token_hash: string;
+          used_at?: string | null;
+        };
+        Update: {
+          client_phone?: string;
+          created_at?: string;
+          created_by?: string;
+          expires_at?: string;
+          id?: string;
+          owner_user_id?: string;
+          purpose?: string;
+          token_hash?: string;
+          used_at?: string | null;
+        };
+        Relationships: [];
+      };
+      client_portal_links: {
+        Row: {
+          client_auth_user_id: string;
+          client_id: string | null;
+          client_phone: string;
+          created_at: string;
+          id: string;
+          is_active: boolean;
+          last_seen_at: string | null;
+          owner_user_id: string;
+        };
+        Insert: {
+          client_auth_user_id: string;
+          client_id?: string | null;
+          client_phone: string;
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          last_seen_at?: string | null;
+          owner_user_id: string;
+        };
+        Update: {
+          client_auth_user_id?: string;
+          client_id?: string | null;
+          client_phone?: string;
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          last_seen_at?: string | null;
+          owner_user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_links_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      client_portal_profiles: {
+        Row: {
+          auth_user_id: string;
+          created_at: string;
+          display_name: string | null;
+          last_login_at: string | null;
+          notifications_enabled: boolean;
+          phone: string;
+        };
+        Insert: {
+          auth_user_id: string;
+          created_at?: string;
+          display_name?: string | null;
+          last_login_at?: string | null;
+          notifications_enabled?: boolean;
+          phone: string;
+        };
+        Update: {
+          auth_user_id?: string;
+          created_at?: string;
+          display_name?: string | null;
+          last_login_at?: string | null;
+          notifications_enabled?: boolean;
+          phone?: string;
         };
         Relationships: [];
       };
@@ -162,6 +385,30 @@ export type Database = {
           id?: string;
           name?: string;
           phone?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      discount_rules: {
+        Row: {
+          created_at: string;
+          discount_percent: number;
+          id: string;
+          is_active: boolean;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          discount_percent?: number;
+          id?: string;
+          is_active?: boolean;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          discount_percent?: number;
+          id?: string;
+          is_active?: boolean;
           user_id?: string;
         };
         Relationships: [];
@@ -207,6 +454,7 @@ export type Database = {
       };
       feedback_tokens: {
         Row: {
+          appointment_id: string | null;
           created_at: string;
           expires_at: string;
           id: string;
@@ -216,6 +464,7 @@ export type Database = {
           user_id: string;
         };
         Insert: {
+          appointment_id?: string | null;
           created_at?: string;
           expires_at: string;
           id?: string;
@@ -225,6 +474,7 @@ export type Database = {
           user_id: string;
         };
         Update: {
+          appointment_id?: string | null;
           created_at?: string;
           expires_at?: string;
           id?: string;
@@ -232,6 +482,47 @@ export type Database = {
           token?: string;
           used_at?: string | null;
           user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "feedback_tokens_appointment_id_fkey";
+            columns: ["appointment_id"];
+            isOneToOne: false;
+            referencedRelation: "appointments";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      push_subscriptions: {
+        Row: {
+          audience: string;
+          auth: string;
+          auth_user_id: string;
+          created_at: string;
+          endpoint: string;
+          id: string;
+          owner_user_id: string;
+          p256dh: string;
+        };
+        Insert: {
+          audience: string;
+          auth: string;
+          auth_user_id: string;
+          created_at?: string;
+          endpoint: string;
+          id?: string;
+          owner_user_id: string;
+          p256dh: string;
+        };
+        Update: {
+          audience?: string;
+          auth?: string;
+          auth_user_id?: string;
+          created_at?: string;
+          endpoint?: string;
+          id?: string;
+          owner_user_id?: string;
+          p256dh?: string;
         };
         Relationships: [];
       };

@@ -3,6 +3,7 @@ import { ru } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 import type { ZodAppointment } from "@/src/schemas/books/bookSchema";
 import type { ZodClient } from "@/src/schemas/clients/clientSchema";
+import { normalizePhone } from "@/src/validators/normalizePhone";
 import type {
   AppointmentsByDayPoint,
   CategorySummaryRow,
@@ -69,11 +70,13 @@ export const calculateMetrics = (
     totalAppointments > 0 ? (completedAppointments.length / totalAppointments) * 100 : 0;
 
   const phoneCounter = appointments.reduce<Record<string, number>>((acc, item) => {
-    if (!item.client_phone) {
+    const normalizedPhone = normalizePhone(item.client_phone);
+
+    if (!normalizedPhone) {
       return acc;
     }
 
-    acc[item.client_phone] = (acc[item.client_phone] ?? 0) + 1;
+    acc[normalizedPhone] = (acc[normalizedPhone] ?? 0) + 1;
     return acc;
   }, {});
 
@@ -91,7 +94,7 @@ export const calculateMetrics = (
       return true;
     }
 
-    return phones.has(client.phone);
+    return phones.has(normalizePhone(client.phone));
   }).length;
 
   return {
