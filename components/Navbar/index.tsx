@@ -4,9 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Check, Menu, Moon, Sun, SunMoon } from "lucide-react";
-import { cn } from "@/src/lib/utils";
-import { createClient } from "@/src/utils/supabase/client";
-import { Button } from "../ui/button";
+import EnablePushButton from "@/components/PWA/EnablePushButton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,11 +13,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/src/lib/utils";
+import { createClient } from "@/src/utils/supabase/client";
+import { Button } from "../ui/button";
 
 const themeOptions = [
   { value: "light", label: "Светлая", Icon: Sun },
-  { value: "dark", label: "Тёмная", Icon: Moon },
+  { value: "dark", label: "Темная", Icon: Moon },
 ] as const;
 
 const NavbarMenu = () => {
@@ -41,6 +42,8 @@ const NavbarMenu = () => {
 
   return (
     <div className="flex items-center gap-2">
+      <EnablePushButton />
+
       <Popover>
         <PopoverTrigger asChild>
           <Button variant="outline" className="cursor-pointer">

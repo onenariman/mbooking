@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import { Geist, Geist_Mono, Noto_Sans } from "next/font/google";
 import AppShell from "@/components/layout/AppShell";
 import { ThemeProvider } from "@/components/providers/theme-provider";
@@ -24,10 +24,15 @@ export const metadata: Metadata = {
   title: "Мумина онлайн запись",
   description: "Управление клиентами",
   formatDetection: {
-    telephone: false,
-    date: false,
     address: false,
+    date: false,
     email: false,
+    telephone: false,
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "MBooking",
   },
 };
 

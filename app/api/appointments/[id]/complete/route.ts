@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { mapSupabaseError } from "@/src/helpers/getErrorMessage";
+import { syncAppointmentRemindersForUser } from "@/src/server/push/reminders";
 import { createClient } from "@/src/utils/supabase/server";
 
 const nonNegativeNumberSchema = z.number().finite().nonnegative();
@@ -199,6 +200,15 @@ export async function POST(
       { message: mapSupabaseError(updateError) },
       { status: 500 },
     );
+  }
+
+  try {
+    await syncAppointmentRemindersForUser({
+      appointmentId: id,
+      userId: user.id,
+    });
+  } catch (error) {
+    console.error("Failed to sync appointment reminders after completion:", error);
   }
 
   if (shouldApplyDiscount) {

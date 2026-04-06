@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/src/utils/supabase/admin";
-import { submitFeedbackSchema } from "@/src/schemas/feedback/feedbackSchema";
 import { getErrorMessage, mapSupabaseError } from "@/src/helpers/getErrorMessage";
+import { submitFeedbackSchema } from "@/src/schemas/feedback/feedbackSchema";
+import { supabaseAdmin } from "@/src/utils/supabase/admin";
 
 const toOptionalNumber = (value: number | null | undefined) =>
   value === null || value === undefined ? undefined : value;
@@ -9,6 +9,7 @@ const toOptionalNumber = (value: number | null | undefined) =>
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = submitFeedbackSchema.safeParse(body);
+
   if (!parsed.success) {
     return NextResponse.json({ message: "Некорректные данные" }, { status: 400 });
   }
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
 
   if (error) {
     const message = getErrorMessage(error);
+
     if (
       message.includes("Invalid or expired token") ||
       message.includes("Feedback text too long")

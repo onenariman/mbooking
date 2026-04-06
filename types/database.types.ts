@@ -76,6 +76,50 @@ export type Database = {
           },
         ];
       };
+        appointment_reminders: {
+          Row: {
+            appointment_id: string;
+            cancelled_at: string | null;
+            created_at: string;
+            id: string;
+            offset_minutes: number;
+            remind_at: string;
+            sent_at: string | null;
+            status: string;
+            user_id: string;
+          };
+          Insert: {
+            appointment_id: string;
+            cancelled_at?: string | null;
+            created_at?: string;
+            id?: string;
+            offset_minutes: number;
+            remind_at: string;
+            sent_at?: string | null;
+            status?: string;
+            user_id: string;
+          };
+          Update: {
+            appointment_id?: string;
+            cancelled_at?: string | null;
+            created_at?: string;
+            id?: string;
+            offset_minutes?: number;
+            remind_at?: string;
+            sent_at?: string | null;
+            status?: string;
+            user_id?: string;
+          };
+          Relationships: [
+            {
+              foreignKeyName: "appointment_reminders_appointment_id_fkey";
+              columns: ["appointment_id"];
+              isOneToOne: false;
+              referencedRelation: "appointments";
+              referencedColumns: ["id"];
+            },
+          ];
+        };
         appointments: {
           Row: {
             applied_discount_id: string | null;
@@ -493,7 +537,28 @@ export type Database = {
           },
         ];
       };
-      push_subscriptions: {
+        owner_notification_settings: {
+          Row: {
+            created_at: string;
+            reminder_offsets_minutes: number[];
+            updated_at: string;
+            user_id: string;
+          };
+          Insert: {
+            created_at?: string;
+            reminder_offsets_minutes?: number[];
+            updated_at?: string;
+            user_id: string;
+          };
+          Update: {
+            created_at?: string;
+            reminder_offsets_minutes?: number[];
+            updated_at?: string;
+            user_id?: string;
+          };
+          Relationships: [];
+        };
+        push_subscriptions: {
         Row: {
           audience: string;
           auth: string;

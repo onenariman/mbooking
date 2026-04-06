@@ -23,6 +23,33 @@ const normalizeAppointment = (appointment: AppointmentRowLike): ZodAppointment =
   status: appointment.status as ZodAppointmentStatus,
 });
 
+const syncAppointmentReminders = async (appointmentId: string) => {
+  try {
+    const response = await fetch("/api/push/reminders/sync", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        appointment_id: appointmentId,
+      }),
+    });
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as {
+        message?: string;
+      } | null;
+
+      console.error(
+        "Failed to sync appointment reminders:",
+        payload?.message || response.statusText,
+      );
+    }
+  } catch (error) {
+    console.error("Failed to sync appointment reminders:", error);
+  }
+};
+
 export class BookingOverlapError extends Error {
   code = "BOOKING_OVERLAP" as const;
 
@@ -87,6 +114,8 @@ export const addAppointment = async (
     throw new Error("Не удалось создать запись: пустой ответ от сервера");
   }
 
+  void syncAppointmentReminders(data.id);
+
   return normalizeAppointment(data as AppointmentRowLike);
 };
 
@@ -137,6 +166,8 @@ export const updateAppointment = async (
   if (!data) {
     throw new Error("Не удалось обновить запись: пустой ответ от сервера");
   }
+
+  void syncAppointmentReminders(data.id);
 
   return normalizeAppointment(data as AppointmentRowLike);
 };
