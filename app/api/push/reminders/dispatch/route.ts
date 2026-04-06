@@ -12,7 +12,7 @@ const getHeaderToken = (request: Request) => {
   return request.headers.get("x-cron-secret")?.trim() ?? null;
 };
 
-export async function POST(request: Request) {
+const handleDispatch = async (request: Request) => {
   const cronSecret = process.env.CRON_SECRET;
   const headerToken = getHeaderToken(request);
 
@@ -61,4 +61,12 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
+};
+
+export async function GET(request: Request) {
+  return handleDispatch(request);
+}
+
+export async function POST(request: Request) {
+  return handleDispatch(request);
 }
