@@ -46,6 +46,7 @@ export default function EnablePushButton() {
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
+  const [lastSavedMessage, setLastSavedMessage] = useState<string | null>(null);
   const [maxSelected, setMaxSelected] = useState(3);
   const [permission, setPermission] = useState<NotificationPermission>("default");
   const [savedOffsets, setSavedOffsets] = useState<number[]>([]);
@@ -210,6 +211,8 @@ export default function EnablePushButton() {
   };
 
   const handleToggleOffset = (offset: number, checked: boolean | "indeterminate") => {
+    setLastSavedMessage(null);
+
     if (checked === true) {
       if (selectedOffsets.includes(offset)) {
         return;
@@ -231,22 +234,28 @@ export default function EnablePushButton() {
     try {
       setIsSavingSettings(true);
       const settings = await savePushSettings(selectedOffsets);
+      const successMessage =
+        settings.reminder_offsets_minutes.length > 0
+          ? `Интервалы сохранены: ${settings.reminder_offsets_minutes
+              .map((offset) => formatOffsetLabel(offset))
+              .join(", ")}`
+          : "Напоминания по записям отключены";
 
       setAllowedOffsets(settings.allowed_offsets_minutes);
       setMaxSelected(settings.max_selected);
       setSavedOffsets(settings.reminder_offsets_minutes);
       setSelectedOffsets(settings.reminder_offsets_minutes);
+      setLastSavedMessage(successMessage);
 
-      toast.success(
-        settings.reminder_offsets_minutes.length > 0
-          ? "Интервалы напоминаний сохранены"
-          : "Напоминания по записям отключены",
-      );
+      toast.success(successMessage, {
+        duration: 3000,
+      });
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
           : "Не удалось сохранить настройки уведомлений";
+      setLastSavedMessage(null);
       toast.error(message);
     } finally {
       setIsSavingSettings(false);
@@ -328,6 +337,10 @@ export default function EnablePushButton() {
             <Save className="mr-2 h-4 w-4" />
             Сохранить интервалы
           </Button>
+
+          {lastSavedMessage ? (
+            <p className="text-xs font-medium text-emerald-600">{lastSavedMessage}</p>
+          ) : null}
         </div>
 
         {permission === "denied" ? (
