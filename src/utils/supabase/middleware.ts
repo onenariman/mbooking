@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 import { Database } from "@/types/database.types";
+import { requireSupabasePublicEnv } from "@/src/utils/supabase/env";
 
 export const updateSession = async (request: NextRequest) => {
   // 1. Создаем начальный ответ
@@ -11,9 +12,10 @@ export const updateSession = async (request: NextRequest) => {
   });
 
   // 2. Инициализируем клиент Supabase
+  const { supabaseKey, supabaseUrl } = requireSupabasePublicEnv("Middleware Supabase client");
   const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY!,
+    supabaseUrl,
+    supabaseKey,
     {
       cookies: {
         getAll() {

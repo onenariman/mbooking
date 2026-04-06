@@ -1,7 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { Database } from "@/types/database.types";
+import { requireSupabasePublicEnv } from "@/src/utils/supabase/env";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const { supabaseUrl } = requireSupabasePublicEnv("Admin Supabase client");
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseServiceRoleKey) {
