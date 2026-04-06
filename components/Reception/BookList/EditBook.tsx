@@ -20,6 +20,8 @@ import { formatPriceInput } from "@/src/validators/formatPriceInput";
 import { Spinner } from "@/components/ui/spinner";
 import { BookingOverlapError } from "@/src/api/receptions.api";
 import { getErrorMessage } from "@/src/helpers/getErrorMessage";
+import { formatAppointmentLabel } from "@/src/lib/appointments/formatAppointmentLabel";
+import { notifyAppointmentPushEvent } from "@/src/lib/push/appointments";
 import DateBook from "../AddBook/DateBook";
 
 export function EditBook({
@@ -51,7 +53,7 @@ export function EditBook({
 
   const handleSave = async () => {
     try {
-      await updateAppointment({
+      const updatedAppointment = await updateAppointment({
         id: book.id,
         updates: {
           amount,
@@ -60,6 +62,20 @@ export function EditBook({
           appointment_end: appointmentEnd ?? undefined,
         },
       });
+      const hasScheduleChanged =
+        appointmentAt !== book.appointment_at ||
+        appointmentEnd !== (book.appointment_end ?? null);
+
+      if (hasScheduleChanged) {
+        void notifyAppointmentPushEvent({
+          appointmentId: updatedAppointment.id,
+          appointmentLabel: formatAppointmentLabel(
+            updatedAppointment.appointment_at,
+            updatedAppointment.appointment_end,
+          ),
+          event: "rescheduled",
+        });
+      }
       toast.success("Р—Р°РїРёСЃСЊ РѕР±РЅРѕРІР»РµРЅР°");
       onOpenChange(false);
     } catch (error) {

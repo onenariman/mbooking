@@ -41,6 +41,8 @@ import {
 } from "@/src/hooks/appointments.hooks";
 import { useDiscounts } from "@/src/hooks/discounts.hooks";
 import { useCreateFeedbackToken } from "@/src/hooks/feedback.hooks";
+import { formatAppointmentLabel } from "@/src/lib/appointments/formatAppointmentLabel";
+import { notifyAppointmentPushEvent } from "@/src/lib/push/appointments";
 import { isPastUtcIso } from "@/src/lib/time";
 import {
   ZodAppointment,
@@ -132,7 +134,22 @@ export default function DropdownMenuBook({ book }: DropdownMenuBookProps) {
     }
 
     try {
-      await updateAppointment({ id: book.id, updates: { status } });
+      const updatedAppointment = await updateAppointment({
+        id: book.id,
+        updates: { status },
+      });
+
+      if (status === "cancelled") {
+        void notifyAppointmentPushEvent({
+          appointmentId: updatedAppointment.id,
+          appointmentLabel: formatAppointmentLabel(
+            book.appointment_at,
+            book.appointment_end,
+          ),
+          event: "cancelled",
+        });
+      }
+
       toast.success("Статус обновлен");
     } catch {
       toast.error("Ошибка обновления статуса");

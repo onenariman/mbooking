@@ -29,6 +29,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { BookingOverlapError } from "@/src/api/receptions.api";
 import { getErrorMessage } from "@/src/helpers/getErrorMessage";
 import { useAddAppointment } from "@/src/hooks/appointments.hooks";
+import { formatAppointmentLabel } from "@/src/lib/appointments/formatAppointmentLabel";
+import { notifyAppointmentPushEvent } from "@/src/lib/push/appointments";
 import { useCategories } from "@/src/hooks/categories.hooks";
 import { useClients } from "@/src/hooks/clients.hooks";
 import { useDiscounts } from "@/src/hooks/discounts.hooks";
@@ -173,7 +175,15 @@ export default function AddBook() {
     }
 
     addAppointment(result.data, {
-      onSuccess: () => {
+      onSuccess: (createdAppointment) => {
+        void notifyAppointmentPushEvent({
+          appointmentId: createdAppointment.id,
+          appointmentLabel: formatAppointmentLabel(
+            createdAppointment.appointment_at,
+            createdAppointment.appointment_end,
+          ),
+          event: "created",
+        });
         toast.success("Запись создана");
         setForm(initialState);
         setOpen(false);
