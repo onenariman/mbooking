@@ -1,0 +1,308 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  owner
+  client_portal
+}
+
+enum AppointmentStatus {
+  booked
+  completed
+  cancelled
+  no_show
+}
+
+enum DiscountSourceType {
+  manual
+  feedback
+  campaign
+}
+
+enum RecommendationJobStatus {
+  queued
+  running
+  succeeded
+  failed
+}
+
+enum ReminderStatus {
+  pending
+  sent
+  cancelled
+}
+
+enum ClientPortalInvitePurpose {
+  activation
+  password_reset
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String
+  role         UserRole
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  tokenHash String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Client {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  name      String
+  phone     String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, phone])
+}
+
+model Category {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @db.Uuid
+  categoryName String
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Service {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  categoryId String?  @db.Uuid
+  name       String
+  price      Decimal? @db.Decimal(10, 2)
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([categoryId])
+}
+
+model Appointment {
+  id                String            @id @default(uuid()) @db.Uuid
+  userId            String            @db.Uuid
+  clientName        String
+  clientPhone       String
+  categoryName      String
+  serviceName       String
+  serviceId         String?           @db.Uuid
+  appointmentAt     DateTime?
+  appointmentEnd    DateTime?
+  status            AppointmentStatus
+  amount            Decimal?          @db.Decimal(10, 2)
+  serviceAmount     Decimal?          @db.Decimal(10, 2)
+  extraAmount       Decimal?          @db.Decimal(10, 2)
+  discountAmount    Decimal?          @db.Decimal(10, 2)
+  appliedDiscountId String?           @db.Uuid
+  notes             String?
+  createdAt         DateTime          @default(now())
+
+  @@index([userId])
+  @@index([serviceId])
+}
+
+model DiscountRule {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @db.Uuid
+  discountPercent Int
+  isActive        Boolean
+  createdAt       DateTime @default(now())
+
+  @@index([userId])
+}
+
+model ClientDiscount {
+  id                       String             @id @default(uuid()) @db.Uuid
+  userId                   String             @db.Uuid
+  clientPhone              String
+  appointmentId            String?            @db.Uuid
+  feedbackToken            String?
+  discountPercent          Int
+  sourceType               DiscountSourceType
+  serviceId                String?            @db.Uuid
+  serviceNameSnapshot      String?
+  note                     String?
+  expiresAt                DateTime?
+  isUsed                   Boolean            @default(false)
+  usedAt                   DateTime?
+  usedOnAppointmentId      String?            @db.Uuid
+  reservedAt               DateTime?
+  reservedForAppointmentId String?            @db.Uuid
+  createdAt                DateTime           @default(now())
+
+  @@index([userId])
+  @@index([clientPhone])
+}
+
+model FeedbackToken {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid
+  appointmentId String?  @db.Uuid
+  token         String   @unique
+  expiresAt     DateTime
+  isActive      Boolean  @default(true)
+  usedAt        DateTime?
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+}
+
+model FeedbackResponse {
+  id                  String   @id @default(uuid()) @db.Uuid
+  userId              String   @db.Uuid
+  feedbackText        String
+  scoreResult         Int?
+  scoreExplanation    Int?
+  scoreComfort        Int?
+  scoreBooking        Int?
+  scoreRecommendation Int?
+  periodBucket        String
+  createdAt           DateTime @default(now())
+
+  @@index([userId])
+}
+
+model RecommendationPrompt {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  name      String
+  content   String
+  isDefault Boolean
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model RecommendationJob {
+  id           String                @id @default(uuid()) @db.Uuid
+  userId       String                @db.Uuid
+  promptId     String?               @db.Uuid
+  resultId     String?               @db.Uuid
+  periodType   String
+  periodFrom   DateTime
+  periodTo     DateTime
+  status       RecommendationJobStatus
+  requestedAt  DateTime              @default(now())
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  durationMs   Int?
+  promptChars  Int?
+  sourceCount  Int?
+  modelName    String?
+  inputTokens  Int?
+  outputTokens Int?
+  errorCode    String?
+  errorMessage String?
+
+  @@index([userId])
+}
+
+model AiRecommendation {
+  id                 String   @id @default(uuid()) @db.Uuid
+  userId             String   @db.Uuid
+  periodType         String
+  periodFrom         DateTime
+  periodTo           DateTime
+  promptId           String?  @db.Uuid
+  promptIdSnapshot   String?
+  promptNameSnapshot String?
+  promptSnapshot     String?
+  summary            String
+  sourceCount        Int
+  modelName          String?
+  inputTokens        Int?
+  outputTokens       Int?
+  createdAt          DateTime @default(now())
+
+  @@index([userId])
+}
+
+model ClientPortalInvite {
+  id          String                    @id @default(uuid()) @db.Uuid
+  ownerUserId String                    @db.Uuid
+  createdBy   String                    @db.Uuid
+  clientPhone String
+  tokenHash   String
+  purpose     ClientPortalInvitePurpose
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime                  @default(now())
+
+  @@index([ownerUserId])
+}
+
+model ClientPortalProfile {
+  authUserId           String   @id @db.Uuid
+  phone                String
+  displayName          String?
+  notificationsEnabled Boolean  @default(false)
+  lastLoginAt          DateTime?
+  createdAt            DateTime @default(now())
+}
+
+model ClientPortalLink {
+  id               String   @id @default(uuid()) @db.Uuid
+  ownerUserId      String   @db.Uuid
+  clientAuthUserId String   @db.Uuid
+  clientId         String?  @db.Uuid
+  clientPhone      String
+  isActive         Boolean  @default(true)
+  lastSeenAt       DateTime?
+  createdAt        DateTime @default(now())
+
+  @@unique([ownerUserId, clientPhone])
+}
+
+model PushSubscription {
+  id          String   @id @default(uuid()) @db.Uuid
+  ownerUserId String   @db.Uuid
+  authUserId  String   @db.Uuid
+  audience    String
+  endpoint    String
+  p256dh      String
+  auth        String
+  createdAt   DateTime @default(now())
+
+  @@index([ownerUserId])
+}
+
+model OwnerNotificationSettings {
+  userId                 String   @id @db.Uuid
+  reminderOffsetsMinutes Int[]
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+}
+
+model AppointmentReminder {
+  id            String       @id @default(uuid()) @db.Uuid
+  appointmentId String       @db.Uuid
+  userId        String       @db.Uuid
+  offsetMinutes Int
+  remindAt      DateTime
+  status        ReminderStatus
+  sentAt        DateTime?
+  cancelledAt   DateTime?
+  createdAt     DateTime     @default(now())
+
+  @@unique([appointmentId, offsetMinutes])
+  @@index([userId])
+}
