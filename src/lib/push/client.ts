@@ -1,3 +1,5 @@
+import { nestErrorMessage, nestOwnerFetch } from "@/src/utils/api/nestOwnerApi";
+
 export type BrowserPushSubscription = {
   endpoint: string;
   keys: {
@@ -56,11 +58,8 @@ export const toBrowserPushSubscription = (
 };
 
 export const savePushSubscription = async (subscription: PushSubscription) => {
-  const response = await fetch("/api/push/subscribe", {
+  const response = await nestOwnerFetch("push/subscribe", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify({
       subscription: toBrowserPushSubscription(subscription),
     }),
@@ -69,40 +68,43 @@ export const savePushSubscription = async (subscription: PushSubscription) => {
   const payload = (await response.json()) as { message?: string };
 
   if (!response.ok) {
-    throw new Error(payload.message || "Не удалось сохранить push-подписку");
+    throw new Error(
+      payload.message || (await nestErrorMessage(response)),
+    );
   }
 };
 
 export const removePushSubscription = async (endpoint: string) => {
-  const response = await fetch("/api/push/subscribe", {
+  const response = await nestOwnerFetch("push/subscribe", {
     method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify({ endpoint }),
   });
 
   const payload = (await response.json()) as { message?: string };
 
   if (!response.ok) {
-    throw new Error(payload.message || "Не удалось отключить push-подписку");
+    throw new Error(
+      payload.message || (await nestErrorMessage(response)),
+    );
   }
 };
 
 export const sendTestPush = async () => {
-  const response = await fetch("/api/push/test", {
+  const response = await nestOwnerFetch("push/test", {
     method: "POST",
   });
 
   const payload = (await response.json()) as { message?: string };
 
   if (!response.ok) {
-    throw new Error(payload.message || "Не удалось отправить тестовое уведомление");
+    throw new Error(
+      payload.message || (await nestErrorMessage(response)),
+    );
   }
 };
 
 export const fetchPushSettings = async (): Promise<OwnerPushSettings> => {
-  const response = await fetch("/api/push/settings", {
+  const response = await nestOwnerFetch("push/settings", {
     method: "GET",
   });
 
@@ -112,7 +114,9 @@ export const fetchPushSettings = async (): Promise<OwnerPushSettings> => {
   };
 
   if (!response.ok || !payload.data) {
-    throw new Error(payload.message || "Не удалось загрузить настройки уведомлений");
+    throw new Error(
+      payload.message || (await nestErrorMessage(response)),
+    );
   }
 
   return payload.data;
@@ -121,11 +125,8 @@ export const fetchPushSettings = async (): Promise<OwnerPushSettings> => {
 export const savePushSettings = async (
   reminderOffsetsMinutes: number[],
 ): Promise<OwnerPushSettings> => {
-  const response = await fetch("/api/push/settings", {
+  const response = await nestOwnerFetch("push/settings", {
     method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify({
       reminder_offsets_minutes: reminderOffsetsMinutes,
     }),
@@ -137,7 +138,9 @@ export const savePushSettings = async (
   };
 
   if (!response.ok || !payload.data) {
-    throw new Error(payload.message || "Не удалось сохранить настройки уведомлений");
+    throw new Error(
+      payload.message || (await nestErrorMessage(response)),
+    );
   }
 
   return payload.data;

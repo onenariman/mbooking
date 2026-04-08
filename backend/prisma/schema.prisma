@@ -22,7 +22,6 @@ enum AppointmentStatus {
 enum DiscountSourceType {
   manual
   feedback
-  campaign
 }
 
 enum RecommendationJobStatus {
@@ -68,7 +67,7 @@ model Client {
   id        String   @id @default(uuid()) @db.Uuid
   userId    String   @db.Uuid
   name      String
-  phone     String
+  phone     String   @unique
   createdAt DateTime @default(now())
 
   @@index([userId])
@@ -78,7 +77,7 @@ model Client {
 model Category {
   id           String   @id @default(uuid()) @db.Uuid
   userId       String   @db.Uuid
-  categoryName String
+  categoryName String   @unique
   createdAt    DateTime @default(now())
 
   @@index([userId])
@@ -117,6 +116,7 @@ model Appointment {
 
   @@index([userId])
   @@index([serviceId])
+  @@unique([userId, appointmentAt, serviceName], map: "appointments_user_service_time_unique")
 }
 
 model DiscountRule {
@@ -174,7 +174,7 @@ model FeedbackResponse {
   scoreComfort        Int?
   scoreBooking        Int?
   scoreRecommendation Int?
-  periodBucket        String
+  periodBucket        DateTime @db.Date
   createdAt           DateTime @default(now())
 
   @@index([userId])
@@ -220,8 +220,8 @@ model AiRecommendation {
   id                 String   @id @default(uuid()) @db.Uuid
   userId             String   @db.Uuid
   periodType         String
-  periodFrom         DateTime
-  periodTo           DateTime
+  periodFrom         DateTime @db.Date
+  periodTo           DateTime @db.Date
   promptId           String?  @db.Uuid
   promptIdSnapshot   String?
   promptNameSnapshot String?
@@ -241,7 +241,7 @@ model ClientPortalInvite {
   ownerUserId String                    @db.Uuid
   createdBy   String                    @db.Uuid
   clientPhone String
-  tokenHash   String
+  tokenHash   String                    @unique
   purpose     ClientPortalInvitePurpose
   expiresAt   DateTime
   usedAt      DateTime?
@@ -252,7 +252,7 @@ model ClientPortalInvite {
 
 model ClientPortalProfile {
   authUserId           String   @id @db.Uuid
-  phone                String
+  phone                String   @unique
   displayName          String?
   notificationsEnabled Boolean  @default(false)
   lastLoginAt          DateTime?
@@ -270,6 +270,7 @@ model ClientPortalLink {
   createdAt        DateTime @default(now())
 
   @@unique([ownerUserId, clientPhone])
+  @@unique([ownerUserId, clientAuthUserId], map: "idx_client_portal_links_owner_client_auth")
 }
 
 model PushSubscription {
@@ -283,6 +284,7 @@ model PushSubscription {
   createdAt   DateTime @default(now())
 
   @@index([ownerUserId])
+  @@unique([authUserId, ownerUserId, endpoint], map: "push_subscriptions_auth_user_id_owner_user_id_endpoint_key")
 }
 
 model OwnerNotificationSettings {

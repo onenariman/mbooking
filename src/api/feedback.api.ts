@@ -4,6 +4,11 @@ import {
   ZodRecommendationJob,
   ZodSubmitFeedback,
 } from "@/src/schemas/feedback/feedbackSchema";
+import {
+  nestErrorMessage,
+  nestOwnerFetch,
+  nestPublicV1Fetch,
+} from "@/src/utils/api/nestOwnerApi";
 
 export type FeedbackRatingsTrend = {
   key: string;
@@ -22,10 +27,20 @@ export type SubmitFeedbackResult = {
   discount_percent: number | null;
 };
 
+function toYmd(s: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    return s;
+  }
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) {
+    return s;
+  }
+  return d.toISOString().slice(0, 10);
+}
+
 export const createFeedbackToken = async (expiresIn = "14 days") => {
-  const response = await fetch("/api/feedback/token", {
+  const response = await nestOwnerFetch("feedback/token", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ expiresIn }),
   });
   const payload = (await response.json()) as {
@@ -33,7 +48,7 @@ export const createFeedbackToken = async (expiresIn = "14 days") => {
     message?: string;
   };
   if (!response.ok) {
-    throw new Error(payload.message || "Не удалось создать токен");
+    throw new Error(payload.message || (await nestErrorMessage(response)));
   }
   if (!payload.data) {
     throw new Error("Ответ сервера не содержит данных");
@@ -45,7 +60,7 @@ export const validateFeedbackToken = async (
   token: string,
 ): Promise<FeedbackTokenValidationResult> => {
   const params = new URLSearchParams({ token });
-  const response = await fetch(`/api/feedback/validate?${params.toString()}`, {
+  const response = await nestPublicV1Fetch(`feedback/validate?${params.toString()}`, {
     method: "GET",
   });
   const payload = (await response.json()) as {
@@ -53,7 +68,7 @@ export const validateFeedbackToken = async (
     message?: string;
   };
   if (!response.ok) {
-    throw new Error(payload.message || "Не удалось проверить token");
+    throw new Error(payload.message || (await nestErrorMessage(response)));
   }
   if (!payload.data) {
     throw new Error("Ответ сервера не содержит данных");
@@ -64,9 +79,8 @@ export const validateFeedbackToken = async (
 export const submitFeedback = async (
   payload: ZodSubmitFeedback,
 ): Promise<SubmitFeedbackResult> => {
-  const response = await fetch("/api/feedback/submit", {
+  const response = await nestPublicV1Fetch("feedback/submit", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   const responsePayload = (await response.json()) as {
@@ -74,7 +88,9 @@ export const submitFeedback = async (
     message?: string;
   };
   if (!response.ok) {
-    throw new Error(responsePayload.message || "Не удалось отправить отзыв");
+    throw new Error(
+      responsePayload.message || (await nestErrorMessage(response)),
+    );
   }
   if (!responsePayload.data) {
     throw new Error("Ответ сервера не содержит данных");
@@ -86,8 +102,11 @@ export const fetchRecommendations = async (
   from: string,
   to: string,
 ): Promise<ZodAiRecommendation[]> => {
-  const params = new URLSearchParams({ from, to });
-  const response = await fetch(`/api/recommendations?${params.toString()}`, {
+  const params = new URLSearchParams({
+    from: toYmd(from),
+    to: toYmd(to),
+  });
+  const response = await nestOwnerFetch(`recommendations?${params.toString()}`, {
     method: "GET",
   });
   const payload = (await response.json()) as {
@@ -95,7 +114,7 @@ export const fetchRecommendations = async (
     message?: string;
   };
   if (!response.ok) {
-    throw new Error(payload.message || "Не удалось загрузить рекомендации");
+    throw new Error(payload.message || (await nestErrorMessage(response)));
   }
   return payload.data ?? [];
 };
@@ -115,8 +134,11 @@ export const fetchFeedbackResponses = async (
   from: string,
   to: string,
 ): Promise<FeedbackResponseItem[]> => {
-  const params = new URLSearchParams({ from, to });
-  const response = await fetch(`/api/feedback/responses?${params.toString()}`, {
+  const params = new URLSearchParams({
+    from: toYmd(from),
+    to: toYmd(to),
+  });
+  const response = await nestOwnerFetch(`feedback/responses?${params.toString()}`, {
     method: "GET",
   });
   const payload = (await response.json()) as {
@@ -124,14 +146,14 @@ export const fetchFeedbackResponses = async (
     message?: string;
   };
   if (!response.ok) {
-    throw new Error(payload.message || "Не удалось загрузить отзывы");
+    throw new Error(payload.message || (await nestErrorMessage(response)));
   }
   return payload.data ?? [];
 };
 
 export const deleteFeedbackResponse = async (feedbackId: string): Promise<void> => {
   const params = new URLSearchParams({ id: feedbackId });
-  const response = await fetch(`/api/feedback/responses?${params.toString()}`, {
+  const response = await nestOwnerFetch(`feedback/responses?${params.toString()}`, {
     method: "DELETE",
   });
   const payload = (await response.json()) as {
@@ -139,7 +161,7 @@ export const deleteFeedbackResponse = async (feedbackId: string): Promise<void> 
     message?: string;
   };
   if (!response.ok) {
-    throw new Error(payload.message || "Не удалось удалить отзыв");
+    throw new Error(payload.message || (await nestErrorMessage(response)));
   }
 };
 
@@ -147,7 +169,7 @@ export const deleteRecommendation = async (
   recommendationId: string,
 ): Promise<void> => {
   const params = new URLSearchParams({ id: recommendationId });
-  const response = await fetch(`/api/recommendations?${params.toString()}`, {
+  const response = await nestOwnerFetch(`recommendations?${params.toString()}`, {
     method: "DELETE",
   });
   const payload = (await response.json()) as {
@@ -155,7 +177,7 @@ export const deleteRecommendation = async (
     message?: string;
   };
   if (!response.ok) {
-    throw new Error(payload.message || "Не удалось удалить рекомендацию");
+    throw new Error(payload.message || (await nestErrorMessage(response)));
   }
 };
 
@@ -163,8 +185,11 @@ export const fetchFeedbackRatingsTrend = async (
   from: string,
   to: string,
 ): Promise<FeedbackRatingsTrend[]> => {
-  const params = new URLSearchParams({ from, to });
-  const response = await fetch(`/api/feedback/ratings?${params.toString()}`, {
+  const params = new URLSearchParams({
+    from: toYmd(from),
+    to: toYmd(to),
+  });
+  const response = await nestOwnerFetch(`feedback/ratings?${params.toString()}`, {
     method: "GET",
   });
   const payload = (await response.json()) as {
@@ -172,7 +197,7 @@ export const fetchFeedbackRatingsTrend = async (
     message?: string;
   };
   if (!response.ok) {
-    throw new Error(payload.message || "Не удалось загрузить оценки");
+    throw new Error(payload.message || (await nestErrorMessage(response)));
   }
   return payload.data ?? [];
 };
@@ -210,13 +235,14 @@ export const createRecommendationJob = async (
   payload: GenerateRecommendationsPayload,
 ): Promise<ZodRecommendationJob> => {
   const { promptId, ...rest } = payload;
-  const response = await fetch("/api/recommendations/jobs", {
+  const response = await nestOwnerFetch("recommendations/jobs", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      ...rest,
+      from: toYmd(rest.from),
+      to: toYmd(rest.to),
       ...(promptId ? { prompt_id: promptId } : {}),
     }),
   });
@@ -228,7 +254,9 @@ export const createRecommendationJob = async (
 
   if (!response.ok) {
     console.error("API Error Response:", responsePayload);
-    throw new Error(responsePayload.message || "Не удалось создать задачу");
+    throw new Error(
+      responsePayload.message || (await nestErrorMessage(response)),
+    );
   }
 
   if (!responsePayload.data) {
@@ -253,7 +281,7 @@ export const fetchRecommendationJob = async (
     throw new Error("ID задачи не установлен");
   }
 
-  const response = await fetch(`/api/recommendations/jobs/${jobId}`, {
+  const response = await nestOwnerFetch(`recommendations/jobs/${jobId}`, {
     method: "GET",
   });
 
@@ -264,7 +292,9 @@ export const fetchRecommendationJob = async (
 
   if (!response.ok) {
     console.error("API Error Response:", responsePayload);
-    throw new Error(responsePayload.message || "Не удалось загрузить задачу");
+    throw new Error(
+      responsePayload.message || (await nestErrorMessage(response)),
+    );
   }
 
   if (!responsePayload.data) {
@@ -282,7 +312,7 @@ export const runRecommendationJob = async (
     throw new Error("ID задачи не установлен");
   }
 
-  const response = await fetch(`/api/recommendations/jobs/${jobId}/run`, {
+  const response = await nestOwnerFetch(`recommendations/jobs/${jobId}/run`, {
     method: "POST",
   });
 
@@ -293,7 +323,9 @@ export const runRecommendationJob = async (
 
   if (!response.ok) {
     console.error("API Error Response:", responsePayload);
-    throw new Error(responsePayload.message || "Не удалось запустить задачу");
+    throw new Error(
+      responsePayload.message || (await nestErrorMessage(response)),
+    );
   }
 
   if (!responsePayload.data) {

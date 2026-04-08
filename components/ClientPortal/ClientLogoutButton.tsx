@@ -2,27 +2,24 @@
 
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { ownerLogout } from "@/app/actions/owner-auth.actions";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/src/utils/supabase/client";
 
 export function ClientLogoutButton() {
   const router = useRouter();
 
   const handleLogout = async () => {
-    const supabase = createClient();
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      await ownerLogout();
+      router.replace("/client/login");
+      router.refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Не удалось выйти");
     }
-
-    router.replace("/client/login");
-    router.refresh();
   };
 
   return (
-    <Button type="button" variant="outline" onClick={handleLogout}>
+    <Button type="button" variant="outline" onClick={() => void handleLogout()}>
       Выйти
     </Button>
   );

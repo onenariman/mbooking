@@ -1,3 +1,5 @@
+import { nestOwnerFetch } from "@/src/utils/api/nestOwnerApi";
+
 export type AppointmentPushEventType = "created" | "rescheduled" | "cancelled";
 
 export const notifyAppointmentPushEvent = async ({
@@ -10,11 +12,8 @@ export const notifyAppointmentPushEvent = async ({
   event: AppointmentPushEventType;
 }) => {
   try {
-    const response = await fetch("/api/push/appointments/event", {
+    const response = await nestOwnerFetch("push/appointments/event", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify({
         appointment_id: appointmentId,
         appointment_label: appointmentLabel ?? null,

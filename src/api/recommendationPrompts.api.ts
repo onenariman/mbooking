@@ -4,6 +4,7 @@ import {
   recommendationPromptSchema,
   ZodRecommendationPrompt,
 } from "@/src/schemas/feedback/feedbackSchema";
+import { nestErrorMessage, nestOwnerFetch } from "@/src/utils/api/nestOwnerApi";
 
 export type RecommendationPromptInput = {
   name: string;
@@ -14,7 +15,7 @@ export type RecommendationPromptInput = {
 export const fetchRecommendationPrompts = async (): Promise<
   ZodRecommendationPrompt[]
 > => {
-  const response = await fetch("/api/recommendations/prompts", {
+  const response = await nestOwnerFetch("recommendations/prompts", {
     method: "GET",
   });
   const payload = (await response.json()) as {
@@ -22,7 +23,7 @@ export const fetchRecommendationPrompts = async (): Promise<
     message?: string;
   };
   if (!response.ok) {
-    throw new Error(payload.message || "Не удалось загрузить промты");
+    throw new Error(payload.message || (await nestErrorMessage(response)));
   }
   const parsed = recommendationPromptArraySchema.safeParse(payload.data ?? []);
   if (!parsed.success) {
@@ -41,9 +42,8 @@ export const createRecommendationPrompt = async (
     );
   }
 
-  const response = await fetch("/api/recommendations/prompts", {
+  const response = await nestOwnerFetch("recommendations/prompts", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(parsedInput.data),
   });
   const payload = (await response.json()) as {
@@ -51,7 +51,7 @@ export const createRecommendationPrompt = async (
     message?: string;
   };
   if (!response.ok) {
-    throw new Error(payload.message || "Не удалось создать промт");
+    throw new Error(payload.message || (await nestErrorMessage(response)));
   }
   if (!payload.data) {
     throw new Error("Ответ сервера не содержит данных");
@@ -68,9 +68,8 @@ export const updateRecommendationPrompt = async (
   id: string,
   input: Partial<RecommendationPromptInput>,
 ): Promise<ZodRecommendationPrompt> => {
-  const response = await fetch(`/api/recommendations/prompts?id=${id}`, {
+  const response = await nestOwnerFetch(`recommendations/prompts?id=${id}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
   const payload = (await response.json()) as {
@@ -78,7 +77,7 @@ export const updateRecommendationPrompt = async (
     message?: string;
   };
   if (!response.ok) {
-    throw new Error(payload.message || "Не удалось обновить промт");
+    throw new Error(payload.message || (await nestErrorMessage(response)));
   }
   if (!payload.data) {
     throw new Error("Ответ сервера не содержит данных");
@@ -92,7 +91,7 @@ export const updateRecommendationPrompt = async (
 };
 
 export const deleteRecommendationPrompt = async (id: string): Promise<void> => {
-  const response = await fetch(`/api/recommendations/prompts?id=${id}`, {
+  const response = await nestOwnerFetch(`recommendations/prompts?id=${id}`, {
     method: "DELETE",
   });
   const payload = (await response.json()) as {
@@ -100,6 +99,6 @@ export const deleteRecommendationPrompt = async (id: string): Promise<void> => {
     message?: string;
   };
   if (!response.ok) {
-    throw new Error(payload.message || "Не удалось удалить промт");
+    throw new Error(payload.message || (await nestErrorMessage(response)));
   }
 };

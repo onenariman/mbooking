@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { useSearchParams } from "next/navigation";
+import { activateClientInviteAndLogin } from "@/app/client/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getErrorMessage } from "@/src/helpers/getErrorMessage";
-import { createClient } from "@/src/utils/supabase/client";
+import { nestPublicV1Fetch } from "@/src/utils/api/nestOwnerApi";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type InvitePayload = {
   client_phone: string;
@@ -18,9 +19,7 @@ type InvitePayload = {
 };
 
 export function ClientInviteActivationForm({ token }: { token: string }) {
-  const router = useRouter();
-  const supabase = createClient();
-
+  const searchParams = useSearchParams();
   const [invite, setInvite] = useState<InvitePayload | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,14 +28,18 @@ export function ClientInviteActivationForm({ token }: { token: string }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isPending, setIsPending] = useState(false);
 
+  const urlError = searchParams.get("error");
+  const urlMessage = searchParams.get("message");
+
   useEffect(() => {
     let isMounted = true;
 
     const validateInvite = async () => {
       try {
-        const response = await fetch(`/api/client/invitations/${token}/validate`, {
-          cache: "no-store",
-        });
+        const response = await nestPublicV1Fetch(
+          `client/invitations/${encodeURIComponent(token)}/validate`,
+          { method: "GET", cache: "no-store" },
+        );
         const payload = (await response.json().catch(() => null)) as
           | { data?: InvitePayload; message?: string }
           | null;
@@ -94,52 +97,15 @@ export function ClientInviteActivationForm({ token }: { token: string }) {
 
     try {
       setIsPending(true);
-      const response = await fetch(`/api/client/invitations/${token}/activate`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: normalizedEmail,
-          password,
-          confirm_password: confirmPassword,
-        }),
-      });
-
-      const payload = (await response.json().catch(() => null)) as
-        | {
-            data?: {
-              client_phone: string;
-              client_phone_display: string;
-            };
-            message?: string;
-          }
-        | null;
-
-      if (!response.ok || !payload?.data) {
-        throw new Error(payload?.message || "Не удалось активировать кабинет");
-      }
-
-      await supabase.auth.signOut();
-
-      const { error } = await supabase.auth.signInWithPassword({
+      await activateClientInviteAndLogin({
+        token,
         email: normalizedEmail,
         password,
+        confirm_password: confirmPassword,
       });
-
-      if (error) {
-        throw error;
-      }
-
-      toast.success("Кабинет активирован", {
-        description: "Теперь вы можете пользоваться личным кабинетом",
-      });
-      router.replace("/client");
-      router.refresh();
     } catch (error) {
       const message = getErrorMessage(error, "Не удалось активировать кабинет");
       setErrorMessage(message);
-      toast.error(message);
     } finally {
       setIsPending(false);
     }
@@ -149,26 +115,27 @@ export function ClientInviteActivationForm({ token }: { token: string }) {
     return <p className="text-sm text-muted-foreground">Проверяем приглашение...</p>;
   }
 
-  if (!invite) {
-    return <p className="text-sm text-destructive">{errorMessage}</p>;
-  }
-
   return (
     <form className="grid gap-4" onSubmit={handleSubmit}>
-      <div className="grid gap-2">
-        <Label htmlFor="invite-phone">Телефон</Label>
-        <Input id="invite-phone" value={invite.client_phone_display} readOnly />
-      </div>
+      {urlError === "activate" && urlMessage ? (
+        <Alert variant="destructive">
+          <AlertDescription>{decodeURIComponent(urlMessage)}</AlertDescription>
+        </Alert>
+      ) : null}
+      {urlError === "nest-unconfigured" ? (
+        <Alert variant="destructive">
+          <AlertDescription>Не настроен URL Nest на сервере Next.</AlertDescription>
+        </Alert>
+      ) : null}
 
       <div className="grid gap-2">
-        <Label htmlFor="invite-email">Email</Label>
+        <Label htmlFor="invite-email">Email для входа</Label>
         <Input
           id="invite-email"
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           autoComplete="email"
-          placeholder="client@example.com"
           required
         />
       </div>
@@ -182,18 +149,20 @@ export function ClientInviteActivationForm({ token }: { token: string }) {
           onChange={(event) => setPassword(event.target.value)}
           autoComplete="new-password"
           required
+          minLength={8}
         />
       </div>
 
       <div className="grid gap-2">
-        <Label htmlFor="invite-confirm-password">Повторите пароль</Label>
+        <Label htmlFor="invite-password-confirm">Повтор пароля</Label>
         <Input
-          id="invite-confirm-password"
+          id="invite-password-confirm"
           type="password"
           value={confirmPassword}
           onChange={(event) => setConfirmPassword(event.target.value)}
           autoComplete="new-password"
           required
+          minLength={8}
         />
       </div>
 
@@ -201,7 +170,7 @@ export function ClientInviteActivationForm({ token }: { token: string }) {
         <p className="text-sm text-destructive">{errorMessage}</p>
       ) : null}
 
-      <Button type="submit" className="w-full" disabled={isPending}>
+      <Button type="submit" disabled={isPending || !invite}>
         {isPending ? "Активируем..." : "Активировать кабинет"}
       </Button>
     </form>

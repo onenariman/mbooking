@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { getErrorMessage } from "@/src/helpers/getErrorMessage";
+import { nestErrorMessage, nestOwnerFetch } from "@/src/utils/api/nestOwnerApi";
 
 export function ClientSettingsForm({
   initialNotificationsEnabled,
@@ -19,11 +20,8 @@ export function ClientSettingsForm({
   const handleCheckedChange = async (checked: boolean) => {
     try {
       setIsPending(true);
-      const response = await fetch("/api/client/settings", {
+      const response = await nestOwnerFetch("client/settings", {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
           notifications_enabled: checked,
         }),
@@ -34,7 +32,9 @@ export function ClientSettingsForm({
         | null;
 
       if (!response.ok) {
-        throw new Error(payload?.message || "Не удалось сохранить настройки");
+        throw new Error(
+          payload?.message || (await nestErrorMessage(response)),
+        );
       }
 
       setNotificationsEnabled(checked);

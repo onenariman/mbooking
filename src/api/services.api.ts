@@ -1,15 +1,20 @@
 import { ZodService } from "../schemas/services/serviceSchema";
+import { nestErrorMessage, nestOwnerFetch } from "@/src/utils/api/nestOwnerApi";
 
-type ServiceCreateInput = Pick<ZodService, "name" | "category_id" | "price">;
-type ServiceUpdateInput = Partial<
-  Pick<ZodService, "name" | "category_id" | "price">
+type ServiceCreateInput = Pick<
+  ZodService,
+  "name" | "category_id" | "price"
 >;
+type ServiceUpdateInput = Partial<ServiceCreateInput>;
 
 export const fetchServices = async (): Promise<ZodService[]> => {
-  const response = await fetch("/api/services", { method: "GET" });
-  const payload = (await response.json()) as { data?: ZodService[]; message?: string };
+  const response = await nestOwnerFetch("services", { method: "GET" });
+  const payload = (await response.json()) as {
+    data?: ZodService[];
+    message?: string;
+  };
   if (!response.ok) {
-    throw new Error(payload.message || "Не удалось загрузить услуги");
+    throw new Error(payload.message || (await nestErrorMessage(response)));
   }
   return payload.data ?? [];
 };
@@ -17,14 +22,16 @@ export const fetchServices = async (): Promise<ZodService[]> => {
 export const addService = async (
   service: ServiceCreateInput,
 ): Promise<ZodService> => {
-  const response = await fetch("/api/services", {
+  const response = await nestOwnerFetch("services", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(service),
   });
-  const payload = (await response.json()) as { data?: ZodService; message?: string };
+  const payload = (await response.json()) as {
+    data?: ZodService;
+    message?: string;
+  };
   if (!response.ok) {
-    throw new Error(payload.message || "Не удалось создать услугу");
+    throw new Error(payload.message || (await nestErrorMessage(response)));
   }
   if (!payload.data) {
     throw new Error("Ответ сервера не содержит данных");
@@ -33,30 +40,27 @@ export const addService = async (
 };
 
 export const deleteService = async (id: string) => {
-  const params = new URLSearchParams({ id });
-  const response = await fetch(`/api/services?${params.toString()}`, {
+  const response = await nestOwnerFetch(`services/${id}`, {
     method: "DELETE",
   });
   const payload = (await response.json()) as { data?: boolean; message?: string };
   if (!response.ok) {
-    throw new Error(payload.message || "Не удалось удалить услугу");
+    throw new Error(payload.message || (await nestErrorMessage(response)));
   }
   return payload.data ?? true;
 };
 
-export const updateService = async (
-  id: string,
-  updates: ServiceUpdateInput,
-) => {
-  const params = new URLSearchParams({ id });
-  const response = await fetch(`/api/services?${params.toString()}`, {
+export const updateService = async (id: string, updates: ServiceUpdateInput) => {
+  const response = await nestOwnerFetch(`services/${id}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(updates),
   });
-  const payload = (await response.json()) as { data?: ZodService; message?: string };
+  const payload = (await response.json()) as {
+    data?: ZodService;
+    message?: string;
+  };
   if (!response.ok) {
-    throw new Error(payload.message || "Не удалось обновить услугу");
+    throw new Error(payload.message || (await nestErrorMessage(response)));
   }
   if (!payload.data) {
     throw new Error("Ответ сервера не содержит данных");

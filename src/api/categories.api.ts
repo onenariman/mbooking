@@ -1,16 +1,17 @@
 import { ZodCategory } from "../schemas/categories/categorySchema";
+import { nestErrorMessage, nestOwnerFetch } from "@/src/utils/api/nestOwnerApi";
 
 type CategoryCreateInput = Pick<ZodCategory, "category_name">;
-type CategoryUpdateInput = Partial<Pick<ZodCategory, "category_name">>;
+type CategoryUpdateInput = Partial<CategoryCreateInput>;
 
 export const fetchCategory = async (): Promise<ZodCategory[]> => {
-  const response = await fetch("/api/categories", { method: "GET" });
+  const response = await nestOwnerFetch("categories", { method: "GET" });
   const payload = (await response.json()) as {
     data?: ZodCategory[];
     message?: string;
   };
   if (!response.ok) {
-    throw new Error(payload.message || "Не удалось загрузить категории");
+    throw new Error(payload.message || (await nestErrorMessage(response)));
   }
   return payload.data ?? [];
 };
@@ -18,9 +19,8 @@ export const fetchCategory = async (): Promise<ZodCategory[]> => {
 export const addCategory = async (
   category: CategoryCreateInput,
 ): Promise<ZodCategory> => {
-  const response = await fetch("/api/categories", {
+  const response = await nestOwnerFetch("categories", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(category),
   });
   const payload = (await response.json()) as {
@@ -28,7 +28,7 @@ export const addCategory = async (
     message?: string;
   };
   if (!response.ok) {
-    throw new Error(payload.message || "Не удалось создать категорию");
+    throw new Error(payload.message || (await nestErrorMessage(response)));
   }
   if (!payload.data) {
     throw new Error("Ответ сервера не содержит данных");
@@ -37,13 +37,12 @@ export const addCategory = async (
 };
 
 export const deleteCategory = async (id: string) => {
-  const params = new URLSearchParams({ id });
-  const response = await fetch(`/api/categories?${params.toString()}`, {
+  const response = await nestOwnerFetch(`categories/${id}`, {
     method: "DELETE",
   });
   const payload = (await response.json()) as { data?: boolean; message?: string };
   if (!response.ok) {
-    throw new Error(payload.message || "Не удалось удалить категорию");
+    throw new Error(payload.message || (await nestErrorMessage(response)));
   }
   return payload.data ?? true;
 };
@@ -52,10 +51,8 @@ export const updateCategory = async (
   id: string,
   updates: CategoryUpdateInput,
 ) => {
-  const params = new URLSearchParams({ id });
-  const response = await fetch(`/api/categories?${params.toString()}`, {
+  const response = await nestOwnerFetch(`categories/${id}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(updates),
   });
   const payload = (await response.json()) as {
@@ -63,7 +60,7 @@ export const updateCategory = async (
     message?: string;
   };
   if (!response.ok) {
-    throw new Error(payload.message || "Не удалось обновить категорию");
+    throw new Error(payload.message || (await nestErrorMessage(response)));
   }
   if (!payload.data) {
     throw new Error("Ответ сервера не содержит данных");

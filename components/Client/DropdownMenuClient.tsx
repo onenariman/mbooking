@@ -134,11 +134,9 @@ export function DropdownMenuClient({
     try {
       setIsCreatingPortalInvite(true);
 
-      const response = await fetch("/api/client/invitations", {
+      const { nestOwnerFetch } = await import("@/src/utils/api/nestOwnerApi");
+      const response = await nestOwnerFetch("client/invitations", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
           client_id: client.id,
           client_user_id: client.user_id,

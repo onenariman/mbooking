@@ -16,6 +16,11 @@ export default function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const isPublicFeedbackRoute = pathname.startsWith("/feedback/");
   const isClientRoute = pathname === "/client" || pathname.startsWith("/client/");
+  /** Мастер: только форма, без шапки и каркаса (как /login и /register). */
+  const isOwnerAuthSurface =
+    pathname === "/" ||
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/register");
 
   if (isPublicFeedbackRoute || isClientRoute) {
     return (
@@ -26,6 +31,15 @@ export default function AppShell({ children }: AppShellProps) {
         </TanstackProvider>
         <Toaster position="top-center" closeButton />
       </main>
+    );
+  }
+
+  if (isOwnerAuthSurface) {
+    return (
+      <>
+        <TanstackProvider>{children}</TanstackProvider>
+        <Toaster position="top-center" closeButton />
+      </>
     );
   }
 

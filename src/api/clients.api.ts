@@ -1,13 +1,17 @@
 import { ZodClient } from "../schemas/clients/clientSchema";
+import { nestErrorMessage, nestOwnerFetch } from "@/src/utils/api/nestOwnerApi";
 
 type ClientCreateInput = Pick<ZodClient, "name" | "phone">;
 type ClientUpdateInput = Partial<ClientCreateInput>;
 
 export const fetchClients = async (): Promise<ZodClient[]> => {
-  const response = await fetch("/api/clients", { method: "GET" });
-  const payload = (await response.json()) as { data?: ZodClient[]; message?: string };
+  const response = await nestOwnerFetch("clients", { method: "GET" });
+  const payload = (await response.json()) as {
+    data?: ZodClient[];
+    message?: string;
+  };
   if (!response.ok) {
-    throw new Error(payload.message || "Не удалось загрузить клиентов");
+    throw new Error(payload.message || (await nestErrorMessage(response)));
   }
   return payload.data ?? [];
 };
@@ -15,14 +19,16 @@ export const fetchClients = async (): Promise<ZodClient[]> => {
 export const addClient = async (
   client: ClientCreateInput,
 ): Promise<ZodClient> => {
-  const response = await fetch("/api/clients", {
+  const response = await nestOwnerFetch("clients", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(client),
   });
-  const payload = (await response.json()) as { data?: ZodClient; message?: string };
+  const payload = (await response.json()) as {
+    data?: ZodClient;
+    message?: string;
+  };
   if (!response.ok) {
-    throw new Error(payload.message || "Не удалось создать клиента");
+    throw new Error(payload.message || (await nestErrorMessage(response)));
   }
   if (!payload.data) {
     throw new Error("Ответ сервера не содержит данных");
@@ -31,29 +37,33 @@ export const addClient = async (
 };
 
 export const deleteClient = async (id: string) => {
-  const params = new URLSearchParams({ id });
-  const response = await fetch(`/api/clients?${params.toString()}`, { method: "DELETE" });
-  const payload = (await response.json()) as { data?: boolean; message?: string };
+  const response = await nestOwnerFetch(`clients/${id}`, {
+    method: "DELETE",
+  });
+  const payload = (await response.json()) as {
+    data?: boolean;
+    message?: string;
+  };
   if (!response.ok) {
-    throw new Error(payload.message || "Не удалось удалить клиента");
+    throw new Error(payload.message || (await nestErrorMessage(response)));
   }
   return payload.data ?? true;
 };
 
 export const updateClient = async (id: string, updates: ClientUpdateInput) => {
-  const params = new URLSearchParams({ id });
-  const response = await fetch(`/api/clients?${params.toString()}`, {
+  const response = await nestOwnerFetch(`clients/${id}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(updates),
   });
-  const payload = (await response.json()) as { data?: ZodClient; message?: string };
+  const payload = (await response.json()) as {
+    data?: ZodClient;
+    message?: string;
+  };
   if (!response.ok) {
-    throw new Error(payload.message || "Не удалось обновить клиента");
+    throw new Error(payload.message || (await nestErrorMessage(response)));
   }
   if (!payload.data) {
     throw new Error("Ответ сервера не содержит данных");
   }
   return { id, updates: payload.data };
 };
-

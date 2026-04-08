@@ -1,12 +1,14 @@
-import { createClient } from "@/src/utils/supabase/client";
 import {
   ZodAppointment,
   ZodAppointmentStatus,
   ZodCreateAppointment,
 } from "../schemas/books/bookSchema";
-import { mapSupabaseError } from "@/src/helpers/getErrorMessage";
+import {
+  isNestBackendConfigured,
+  nestErrorMessage,
+  nestOwnerFetch,
+} from "@/src/utils/api/nestOwnerApi";
 
-const supabase = createClient();
 const DEFAULT_CATEGORY = "Без категории";
 
 type DateFilter = {
@@ -25,25 +27,13 @@ const normalizeAppointment = (appointment: AppointmentRowLike): ZodAppointment =
 
 const syncAppointmentReminders = async (appointmentId: string) => {
   try {
-    const response = await fetch("/api/push/reminders/sync", {
+    const response = await nestOwnerFetch("push/reminders/sync", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        appointment_id: appointmentId,
-      }),
+      body: JSON.stringify({ appointment_id: appointmentId }),
     });
-
     if (!response.ok) {
-      const payload = (await response.json().catch(() => null)) as {
-        message?: string;
-      } | null;
-
-      console.error(
-        "Failed to sync appointment reminders:",
-        payload?.message || response.statusText,
-      );
+      const msg = await nestErrorMessage(response);
+      console.error("Failed to sync appointment reminders:", msg);
     }
   } catch (error) {
     console.error("Failed to sync appointment reminders:", error);
@@ -59,89 +49,92 @@ export class BookingOverlapError extends Error {
   }
 }
 
+function assertNest() {
+  if (!isNestBackendConfigured()) {
+    throw new Error("Nest BFF отключён");
+  }
+}
+
 export const fetchAppointments = async ({
   from,
   to,
 }: DateFilter): Promise<ZodAppointment[]> => {
-  let query = supabase
-    .from("appointments")
-    .select("*")
-    .order("appointment_at", { ascending: true });
-
+  assertNest();
+  const response = await nestOwnerFetch("appointments", { method: "GET" });
+  const payload = (await response.json()) as {
+    data?: AppointmentRowLike[];
+    message?: string;
+  };
+  if (!response.ok) {
+    throw new Error(payload.message || (await nestErrorMessage(response)));
+  }
+  let list = payload.data ?? [];
   if (from) {
-    query = query.gte("appointment_at", from);
+    list = list.filter((a) => a.appointment_at && a.appointment_at >= from);
   }
   if (to) {
-    query = query.lte("appointment_at", to);
+    list = list.filter((a) => a.appointment_at && a.appointment_at <= to);
   }
-
-  const { data, error } = await query;
-
-  if (error) {
-    throw new Error(mapSupabaseError(error));
-  }
-  if (!data) {
-    return [];
-  }
-
-  return data.map((item) => normalizeAppointment(item as AppointmentRowLike));
+  return list.map((item) => normalizeAppointment(item));
 };
 
 export const addAppointment = async (
   appointment: ZodCreateAppointment,
 ): Promise<ZodAppointment> => {
+  assertNest();
   const appointmentData = {
     ...appointment,
     category_name: appointment.category_name || DEFAULT_CATEGORY,
     status: appointment.status || "booked",
   };
 
-  const { data, error } = await supabase
-    .from("appointments")
-    .insert([appointmentData])
-    .select()
-    .single();
+  const response = await nestOwnerFetch("appointments", {
+    method: "POST",
+    body: JSON.stringify(appointmentData),
+  });
 
-  if (error) {
-    if (error.code === "23P01" || error.code === "23505") {
-      throw new BookingOverlapError();
+  const payload = (await response.json()) as {
+    data?: AppointmentRowLike;
+    message?: string;
+  };
+
+  if (!response.ok) {
+    if (response.status === 409) {
+      throw new BookingOverlapError(
+        typeof payload.message === "string" ? payload.message : undefined,
+      );
     }
-
-    throw new Error(mapSupabaseError(error));
+    throw new Error(payload.message || (await nestErrorMessage(response)));
   }
 
-  if (!data) {
+  if (!payload.data) {
     throw new Error("Не удалось создать запись: пустой ответ от сервера");
   }
 
-  void syncAppointmentReminders(data.id);
+  void syncAppointmentReminders(payload.data.id);
 
-  return normalizeAppointment(data as AppointmentRowLike);
+  return normalizeAppointment(payload.data);
 };
 
 export const deleteAppointment = async (
   id: string,
 ): Promise<ZodAppointment[]> => {
-  const { data, error } = await supabase
-    .from("appointments")
-    .delete()
-    .eq("id", id)
-    .select();
-
-  if (error) {
-    throw new Error(mapSupabaseError(error));
+  assertNest();
+  const response = await nestOwnerFetch(`appointments/${id}`, {
+    method: "DELETE",
+  });
+  const payload = (await response.json()) as { data?: boolean; message?: string };
+  if (!response.ok) {
+    throw new Error(payload.message || (await nestErrorMessage(response)));
   }
-  if (!data) {
-    return [];
-  }
-
-  return data.map((item) => normalizeAppointment(item as AppointmentRowLike));
+  return [];
 };
 
 export const updateAppointment = async (
   id: string,
   updates: Partial<ZodCreateAppointment>,
 ): Promise<ZodAppointment> => {
+  assertNest();
   const updatesData = {
     ...updates,
     ...(updates.category_name === undefined
@@ -150,25 +143,29 @@ export const updateAppointment = async (
     ...(updates.status === undefined ? {} : { status: updates.status || "booked" }),
   };
 
-  const { data, error } = await supabase
-    .from("appointments")
-    .update(updatesData)
-    .eq("id", id)
-    .select()
-    .single();
+  const response = await nestOwnerFetch(`appointments/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(updatesData),
+  });
 
-  if (error) {
-    if (error.code === "23P01" || error.code === "23505") {
-      throw new BookingOverlapError();
+  const payload = (await response.json()) as {
+    data?: AppointmentRowLike;
+    message?: string;
+  };
+
+  if (!response.ok) {
+    if (response.status === 409) {
+      throw new BookingOverlapError(
+        typeof payload.message === "string" ? payload.message : undefined,
+      );
     }
-    throw new Error(mapSupabaseError(error));
+    throw new Error(payload.message || (await nestErrorMessage(response)));
   }
-  if (!data) {
+  if (!payload.data) {
     throw new Error("Не удалось обновить запись: пустой ответ от сервера");
   }
 
-  void syncAppointmentReminders(data.id);
+  void syncAppointmentReminders(payload.data.id);
 
-  return normalizeAppointment(data as AppointmentRowLike);
+  return normalizeAppointment(payload.data);
 };
-

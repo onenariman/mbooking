@@ -9,6 +9,15 @@ export const getSupabasePublicEnv = () => ({
   supabaseUrl: getSupabaseUrl(),
 });
 
+/** Пара ключ+URL без исключения (для middleware без обязательного Supabase). */
+export const getOptionalSupabasePublicEnv = () => {
+  const { supabaseKey, supabaseUrl } = getSupabasePublicEnv();
+  if (!supabaseUrl || !supabaseKey) {
+    return { supabaseKey: null as string | null, supabaseUrl: null as string | null };
+  }
+  return { supabaseKey, supabaseUrl };
+};
+
 export const requireSupabasePublicEnv = (
   clientName = "Supabase client",
 ) => {

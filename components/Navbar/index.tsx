@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
 import { Check, Menu, Moon, Sun, SunMoon } from "lucide-react";
+import { ownerLogout } from "@/app/actions/owner-auth.actions";
 import EnablePushButton from "@/components/PWA/EnablePushButton";
 import {
   DropdownMenu,
@@ -15,8 +15,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/src/lib/utils";
-import { createClient } from "@/src/utils/supabase/client";
 import { Button } from "../ui/button";
+import { useTheme } from "next-themes";
 
 const themeOptions = [
   { value: "light", label: "Светлая", Icon: Sun },
@@ -26,17 +26,10 @@ const themeOptions = [
 const NavbarMenu = () => {
   const { theme, setTheme } = useTheme();
   const router = useRouter();
-  const supabase = createClient();
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
-      console.error("Failed to sign out:", error.message);
-      return;
-    }
-
-    router.replace("/login");
+    await ownerLogout();
+    router.replace("/");
     router.refresh();
   };
 

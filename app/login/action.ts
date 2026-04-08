@@ -1,20 +1,21 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { createClient } from "@/src/utils/supabase/server";
+import { postNestAuth } from "@/src/server/nest-auth-server";
+import { setOwnerSessionCookies } from "@/src/server/owner-session-cookies";
 
 export async function login(formData: FormData) {
-  const supabase = await createClient();
-
-  const email = formData.get("email") as string;
+  const email = (formData.get("email") as string).trim().toLowerCase();
   const password = formData.get("password") as string;
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-  if (error) {
-    redirect("/login?error=auth-failed");
+  const result = await postNestAuth("/v1/auth/login", { email, password });
+  if (!result.ok) {
+    if (result.status === 503) {
+      redirect("/?error=nest-unconfigured");
+    }
+    redirect("/?error=auth-failed");
   }
 
+  await setOwnerSessionCookies(result.accessToken, result.refreshToken);
   redirect("/");
 }
-

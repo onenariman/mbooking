@@ -1,3 +1,5 @@
+import { nestErrorMessage, nestOwnerFetch } from "@/src/utils/api/nestOwnerApi";
+
 export type CompleteAppointmentPayload = {
   id: string;
   amount?: number | null;
@@ -25,11 +27,8 @@ export const completeAppointment = async ({
     ...(service_amount === undefined ? {} : { service_amount }),
   };
 
-  const response = await fetch(`/api/appointments/${id}/complete`, {
+  const response = await nestOwnerFetch(`appointments/${id}/complete`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify(requestBody),
   });
 
@@ -39,7 +38,7 @@ export const completeAppointment = async ({
   };
 
   if (!response.ok) {
-    throw new Error(payload.message || "Не удалось завершить запись");
+    throw new Error(payload.message || (await nestErrorMessage(response)));
   }
 
   if (!payload.data) {
