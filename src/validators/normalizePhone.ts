@@ -22,6 +22,16 @@ export function isNormalizedPhone(value: string): boolean {
   return NORMALIZED_PHONE_REGEX.test(value);
 }
 
+export function toAuthPhone(value: string): string {
+  const normalized = normalizePhone(value);
+
+  if (!normalized) {
+    return "";
+  }
+
+  return `+${normalized}`;
+}
+
 export function formatPhoneDisplay(value: string): string {
   const normalized = normalizePhone(value);
 

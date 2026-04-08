@@ -76,50 +76,124 @@ export type Database = {
           },
         ];
       };
+      appointment_reminders: {
+        Row: {
+          appointment_id: string;
+          cancelled_at: string | null;
+          created_at: string;
+          id: string;
+          offset_minutes: number;
+          remind_at: string;
+          sent_at: string | null;
+          status: string;
+          user_id: string;
+        };
+        Insert: {
+          appointment_id: string;
+          cancelled_at?: string | null;
+          created_at?: string;
+          id?: string;
+          offset_minutes: number;
+          remind_at: string;
+          sent_at?: string | null;
+          status?: string;
+          user_id: string;
+        };
+        Update: {
+          appointment_id?: string;
+          cancelled_at?: string | null;
+          created_at?: string;
+          id?: string;
+          offset_minutes?: number;
+          remind_at?: string;
+          sent_at?: string | null;
+          status?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "appointment_reminders_appointment_id_fkey";
+            columns: ["appointment_id"];
+            isOneToOne: false;
+            referencedRelation: "appointments";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       appointments: {
         Row: {
           amount: number | null;
+          applied_discount_id: string | null;
           appointment_at: string | null;
           appointment_end: string | null;
           category_name: string;
           client_name: string;
           client_phone: string;
           created_at: string;
+          discount_amount: number | null;
+          extra_amount: number | null;
           id: string;
           notes: string | null;
+          service_amount: number | null;
+          service_id: string | null;
           service_name: string;
           status: string;
           user_id: string;
         };
         Insert: {
           amount?: number | null;
+          applied_discount_id?: string | null;
           appointment_at?: string | null;
           appointment_end?: string | null;
           category_name: string;
           client_name: string;
           client_phone: string;
           created_at?: string;
+          discount_amount?: number | null;
+          extra_amount?: number | null;
           id?: string;
           notes?: string | null;
+          service_amount?: number | null;
+          service_id?: string | null;
           service_name: string;
           status: string;
           user_id?: string;
         };
         Update: {
           amount?: number | null;
+          applied_discount_id?: string | null;
           appointment_at?: string | null;
           appointment_end?: string | null;
           category_name?: string;
           client_name?: string;
           client_phone?: string;
           created_at?: string;
+          discount_amount?: number | null;
+          extra_amount?: number | null;
           id?: string;
           notes?: string | null;
+          service_amount?: number | null;
+          service_id?: string | null;
           service_name?: string;
           status?: string;
           user_id?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "appointments_applied_discount_id_fkey";
+            columns: ["applied_discount_id"];
+            isOneToOne: false;
+            referencedRelation: "client_discounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "appointments_service_id_fkey";
+            columns: ["service_id"];
+            isOneToOne: false;
+            referencedRelation: "services";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       categories: {
         Row: {
@@ -148,10 +222,18 @@ export type Database = {
           client_phone: string;
           created_at: string;
           discount_percent: number;
-          feedback_token: string;
+          expires_at: string | null;
+          feedback_token: string | null;
           id: string;
           is_used: boolean;
+          note: string | null;
+          reserved_at: string | null;
+          reserved_for_appointment_id: string | null;
+          service_id: string | null;
+          service_name_snapshot: string | null;
+          source_type: string;
           used_at: string | null;
+          used_on_appointment_id: string | null;
           user_id: string;
         };
         Insert: {
@@ -159,10 +241,18 @@ export type Database = {
           client_phone: string;
           created_at?: string;
           discount_percent?: number;
-          feedback_token: string;
+          expires_at?: string | null;
+          feedback_token?: string | null;
           id?: string;
           is_used?: boolean;
+          note?: string | null;
+          reserved_at?: string | null;
+          reserved_for_appointment_id?: string | null;
+          service_id?: string | null;
+          service_name_snapshot?: string | null;
+          source_type?: string;
           used_at?: string | null;
+          used_on_appointment_id?: string | null;
           user_id: string;
         };
         Update: {
@@ -170,16 +260,45 @@ export type Database = {
           client_phone?: string;
           created_at?: string;
           discount_percent?: number;
-          feedback_token?: string;
+          expires_at?: string | null;
+          feedback_token?: string | null;
           id?: string;
           is_used?: boolean;
+          note?: string | null;
+          reserved_at?: string | null;
+          reserved_for_appointment_id?: string | null;
+          service_id?: string | null;
+          service_name_snapshot?: string | null;
+          source_type?: string;
           used_at?: string | null;
+          used_on_appointment_id?: string | null;
           user_id?: string;
         };
         Relationships: [
           {
             foreignKeyName: "client_discounts_appointment_id_fkey";
             columns: ["appointment_id"];
+            isOneToOne: false;
+            referencedRelation: "appointments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "client_discounts_reserved_for_appointment_id_fkey";
+            columns: ["reserved_for_appointment_id"];
+            isOneToOne: false;
+            referencedRelation: "appointments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "client_discounts_service_id_fkey";
+            columns: ["service_id"];
+            isOneToOne: false;
+            referencedRelation: "services";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "client_discounts_used_on_appointment_id_fkey";
+            columns: ["used_on_appointment_id"];
             isOneToOne: false;
             referencedRelation: "appointments";
             referencedColumns: ["id"];
@@ -417,6 +536,27 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      owner_notification_settings: {
+        Row: {
+          created_at: string;
+          reminder_offsets_minutes: number[];
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          reminder_offsets_minutes?: number[];
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          reminder_offsets_minutes?: number[];
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
       };
       push_subscriptions: {
         Row: {

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import {
   Edit2Icon,
   EllipsisVertical,
+  KeyRound,
   MessageCircle,
   Percent,
   Phone,
@@ -60,6 +61,7 @@ export function DropdownMenuClient({
   const [showDelete, setShowDelete] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isCreatingPortalInvite, setIsCreatingPortalInvite] = useState(false);
   const [discountPercent, setDiscountPercent] = useState("");
   const [discountNote, setDiscountNote] = useState("");
   const [discountServiceId, setDiscountServiceId] = useState<string | null>(null);
@@ -120,6 +122,80 @@ export function DropdownMenuClient({
       toast.success("Ссылка на отзыв скопирована");
     } catch (error) {
       toast.error(getErrorMessage(error, "Ошибка отправки ссылки"));
+    }
+  };
+
+  const handleSendClientInvite = async () => {
+    if (!phone) {
+      toast.error("У клиента нет корректного номера телефона");
+      return;
+    }
+
+    try {
+      setIsCreatingPortalInvite(true);
+
+      const response = await fetch("/api/client/invitations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          client_id: client.id,
+          client_user_id: client.user_id,
+          client_phone: phone,
+          purpose: "activation",
+          expires_in_hours: 24 * 7,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            data?: {
+              invitation_link: string;
+            };
+            message?: string;
+          }
+        | null;
+
+      if (!response.ok || !payload?.data) {
+        throw new Error(payload?.message || "Не удалось создать приглашение");
+      }
+
+      const invitationLink = payload.data.invitation_link;
+      const invitationMessage = [
+        "Ваш личный кабинет клиента готов к активации.",
+        "",
+        "Откройте ссылку и задайте пароль:",
+        invitationLink,
+        "",
+        "Ссылка действует 7 дней.",
+      ].join("\n");
+      const encodedMessage = encodeURIComponent(invitationMessage);
+
+      if (whatsappPhone) {
+        window.open(
+          `https://wa.me/${whatsappPhone}?text=${encodedMessage}`,
+          "_blank",
+          "noopener,noreferrer",
+        );
+        toast.success("Приглашение в кабинет открыто в WhatsApp");
+        return;
+      }
+
+      if (phone.trim()) {
+        window.location.assign(`sms:${phone}?&body=${encodedMessage}`);
+        toast.success("Приглашение в кабинет добавлено в SMS");
+        return;
+      }
+
+      await navigator.clipboard.writeText(invitationLink);
+      toast.success("Ссылка-приглашение скопирована");
+    } catch (error) {
+      toast.error(
+        getErrorMessage(error, "Не удалось отправить приглашение в кабинет"),
+      );
+    } finally {
+      setIsCreatingPortalInvite(false);
     }
   };
 
@@ -201,6 +277,13 @@ export function DropdownMenuClient({
           >
             <Send className="mr-2 h-4 w-4 text-foreground" />
             Отзыв
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={handleSendClientInvite}
+            disabled={isCreatingPortalInvite || (!phone.trim() && !whatsappPhone)}
+          >
+            <KeyRound className="mr-2 h-4 w-4 text-sky-600" />
+            Пригласить в кабинет
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => setShowCreateDiscount(true)}

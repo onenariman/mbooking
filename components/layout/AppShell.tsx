@@ -15,8 +15,9 @@ interface AppShellProps {
 export default function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const isPublicFeedbackRoute = pathname.startsWith("/feedback/");
+  const isClientRoute = pathname === "/client" || pathname.startsWith("/client/");
 
-  if (isPublicFeedbackRoute) {
+  if (isPublicFeedbackRoute || isClientRoute) {
     return (
       <main className="mx-auto mt-5 max-w-5xl px-4">
         <TanstackProvider>
