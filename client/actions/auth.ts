@@ -1,0 +1,50 @@
+"use server";
+
+import { CLIENT_PORTAL_REFRESH_COOKIE } from "@/src/lib/owner-session";
+import { refreshNestSessionTokens } from "@/src/server/nest-session";
+import { getNestServerBaseUrl } from "@/src/server/nest-internal";
+import {
+  clearClientPortalSessionCookies,
+  setClientPortalSessionCookies,
+} from "@/src/server/owner-session-cookies";
+import { cookies } from "next/headers";
+
+export async function clientPortalLogout(): Promise<void> {
+  const jar = await cookies();
+  const refresh = jar.get(CLIENT_PORTAL_REFRESH_COOKIE)?.value;
+  await clearClientPortalSessionCookies();
+
+  const base = getNestServerBaseUrl();
+  if (base && refresh) {
+    try {
+      await fetch(`${base}/v1/auth/logout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refresh }),
+      });
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+export async function refreshClientPortalSessionFromCookies(): Promise<{
+  ok: boolean;
+  message?: string;
+}> {
+  const jar = await cookies();
+  const refresh = jar.get(CLIENT_PORTAL_REFRESH_COOKIE)?.value;
+  if (!refresh) {
+    return { ok: false, message: "Нет refresh-сессии клиента в cookie" };
+  }
+  const base = getNestServerBaseUrl();
+  if (!base) {
+    return { ok: false, message: "Nest не настроен" };
+  }
+  const tokens = await refreshNestSessionTokens(refresh);
+  if (!tokens) {
+    return { ok: false, message: "Не удалось обновить сессию клиента" };
+  }
+  await setClientPortalSessionCookies(tokens.accessToken, tokens.refreshToken);
+  return { ok: true };
+}

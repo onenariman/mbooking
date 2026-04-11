@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { OWNER_ACCESS_COOKIE } from "@/src/lib/owner-session";
 import { AppointmentArraySchema } from "@/src/schemas/books/bookSchema";
 import { ClientArraySchema } from "@/src/schemas/clients/clientSchema";
 import { getNestServerBaseUrl } from "@/src/server/nest-internal";
+import { resolveSessionFromCookies } from "@/src/server/nest-session";
+import { applySessionCookiesToResponse } from "@/src/server/owner-session-cookies";
 import {
   buildAppointmentsByDay,
   buildCategoriesSummary,
@@ -13,7 +14,6 @@ import {
   calculateMetrics,
   normalizeCategoryName,
 } from "@/components/Charts/lib/analytics";
-import { cookies } from "next/headers";
 
 const requestSchema = z.object({
   from: z.string().datetime().nullable().optional(),
@@ -33,9 +33,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ message: "Некорректные параметры" }, { status: 400 });
   }
 
-  const jar = await cookies();
-  const token = jar.get(OWNER_ACCESS_COOKIE)?.value;
-  if (!token) {
+  const session = await resolveSessionFromCookies("owner");
+  if (!session.accessToken) {
     return NextResponse.json({ message: "Не авторизован" }, { status: 401 });
   }
 
@@ -44,7 +43,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ message: "Nest не настроен" }, { status: 503 });
   }
 
-  const authHeaders = { Authorization: `Bearer ${token}` };
+  const authHeaders = { Authorization: `Bearer ${session.accessToken}` };
 
   const [apRes, clRes] = await Promise.all([
     fetch(`${base}/v1/appointments`, {
@@ -167,7 +166,7 @@ export async function GET(request: Request) {
   );
   const revenueLossMetrics = buildRevenueLossMetrics(selectedAppointments);
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     data: {
       dateFilter,
       categoryOptions: ["all", ...categoryOptions],
@@ -181,4 +180,8 @@ export async function GET(request: Request) {
       revenueLossMetrics,
     },
   });
+  if (session.sessionUpdate) {
+    applySessionCookiesToResponse(response, "owner", session.sessionUpdate);
+  }
+  return response;
 }

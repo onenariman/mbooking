@@ -12,10 +12,10 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getOwnerRegistrationEnabled } from "@/src/server/nest-session";
 
 export function OwnerLoginCard() {
-  const ownerRegistrationOpen =
-    process.env.NEXT_PUBLIC_OWNER_REGISTRATION_ENABLED !== "false";
+  const ownerRegistrationOpen = getOwnerRegistrationEnabled();
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">

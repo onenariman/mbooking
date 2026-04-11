@@ -33,11 +33,13 @@ const statusToBadgeVariant: Record<ZodAppointmentStatus, BadgeVariant> = {
 
 const ItemBook = ({ book }: ItemProps) => {
   return (
-    <div className="flex w-full items-center justify-between text-foreground p-2">
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <div className="flex flex-col items-start">
-          <span>{book.client_name}</span>
-          <span className="text-muted-foreground">{book.service_name}</span>
+    <div className="flex w-full items-center justify-between gap-3 text-foreground">
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <div className="flex flex-col items-start gap-0.5">
+          <span className="text-base font-semibold leading-tight tracking-tight">
+            {book.client_name}
+          </span>
+          <span className="text-sm text-muted-foreground">{book.service_name}</span>
         </div>
         {book.appointment_at && (
           <div className="flex items-center gap-x-1 text-sm text-muted-foreground">

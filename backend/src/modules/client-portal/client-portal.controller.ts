@@ -11,6 +11,7 @@ import {
   Post,
   UseGuards,
 } from "@nestjs/common";
+import { Throttle, ThrottlerGuard } from "@nestjs/throttler";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { Public } from "../../common/decorators/public.decorator";
 import { ClientPortalRoleGuard } from "../../common/guards/client-portal-role.guard";
@@ -25,6 +26,9 @@ import { ClientSettingsDto } from "./dto/client-settings.dto";
 import { CreateClientInvitationDto } from "./dto/create-client-invitation.dto";
 import { ClientPortalContextService } from "./client-portal-context.service";
 import { ClientPortalInvitationsService } from "./client-portal-invitations.service";
+
+const INVITE_VALIDATE_LIMIT = { auth: { ttl: 60_000, limit: 30 } };
+const INVITE_ACTIVATE_LIMIT = { auth: { ttl: 60_000, limit: 5 } };
 
 @Controller("client")
 @UseGuards(JwtAuthGuard)
@@ -47,6 +51,8 @@ export class ClientPortalController {
   }
 
   @Public()
+  @UseGuards(ThrottlerGuard)
+  @Throttle(INVITE_VALIDATE_LIMIT)
   @Get("invitations/:token/validate")
   async validateInvitation(@Param("token") token: string) {
     const data = await this.invitations.validateInvite(token);
@@ -54,6 +60,8 @@ export class ClientPortalController {
   }
 
   @Public()
+  @UseGuards(ThrottlerGuard)
+  @Throttle(INVITE_ACTIVATE_LIMIT)
   @Post("invitations/:token/activate")
   async activateInvitation(
     @Param("token") token: string,

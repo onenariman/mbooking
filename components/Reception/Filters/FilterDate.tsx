@@ -71,7 +71,7 @@ export default function FilterDate({ onChange }: Props) {
         <div className="p-4 flex flex-col gap-4">
           <div className="space-y-1">
             <h4 className="font-medium">Выберите период</h4>
-            <p className="text-xs text-white">
+            <p className="text-xs text-muted-foreground">
               Записи будут отфильтрованы по этому диапазону.
             </p>
           </div>

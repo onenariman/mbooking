@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useMemo } from "react";
-import { AlertCircle, RefreshCcw } from "lucide-react";
+import { AlertCircle, CalendarSearch, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -84,33 +84,45 @@ export default function BookList({
 
   if (filteredAppointments.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed py-10 text-center">
-        <p className="text-sm text-muted-foreground">
+      <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/70 bg-muted/15 px-5 py-12 text-center">
+        <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          <CalendarSearch className="size-7 opacity-90" strokeWidth={1.75} />
+        </div>
+        <p className="text-sm font-medium text-foreground">
           {appointments.length > 0
-            ? "Нет записей, соответствующих фильтрам"
-            : "На выбранный период записей не найдено"}
+            ? "Нет записей по фильтрам"
+            : "На этот период записей нет"}
+        </p>
+        <p className="max-w-[260px] text-xs leading-relaxed text-muted-foreground">
+          {appointments.length > 0
+            ? "Смените категорию, статус или даты."
+            : "Выберите другой диапазон дат или создайте новую запись."}
         </p>
       </div>
     );
   }
 
   return (
-    <Command className="bg-transparent">
+    <Command className="rounded-2xl border border-border/60 bg-muted/10 p-2 shadow-sm md:p-2.5">
       <CommandInput
         className="text-base md:text-sm"
-        placeholder="Поиск по имени клиента..."
+        placeholder="Поиск по имени или услуге…"
       />
-      <CommandList>
-        <CommandEmpty>Ничего не найдено</CommandEmpty>
-        <CommandGroup>
+      <CommandList className="max-h-[min(70vh,520px)]">
+        <CommandEmpty className="py-10 text-sm text-muted-foreground">
+          Ничего не найдено
+        </CommandEmpty>
+        <CommandGroup className="p-0 pt-2">
           {filteredAppointments.map((book) => (
             <CommandItem
-              className="mt-3 w-full bg-background/70 rounded-4xl"
+              className="mb-2 w-full rounded-2xl border border-border/70 bg-transparent px-0 py-0 last:mb-0 data-[selected=true]:border-border data-[selected=true]:bg-muted/30 aria-selected:bg-muted/25"
               key={book.id}
               value={`${book.client_name} ${book.service_name}`}
-              variant="outline"
+              variant="default"
             >
-              <ItemBook book={book} />
+              <div className="w-full p-3.5 md:p-4">
+                <ItemBook book={book} />
+              </div>
             </CommandItem>
           ))}
         </CommandGroup>

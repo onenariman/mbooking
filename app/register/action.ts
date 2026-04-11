@@ -2,10 +2,11 @@
 
 import { redirect } from "next/navigation";
 import { postNestAuth } from "@/src/server/nest-auth-server";
+import { getOwnerRegistrationEnabled } from "@/src/server/nest-session";
 import { setOwnerSessionCookies } from "@/src/server/owner-session-cookies";
 
 export async function registerOwner(formData: FormData) {
-  if (process.env.NEXT_PUBLIC_OWNER_REGISTRATION_ENABLED === "false") {
+  if (!getOwnerRegistrationEnabled()) {
     redirect("/?error=registration-disabled");
   }
 

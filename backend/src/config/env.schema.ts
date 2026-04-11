@@ -22,7 +22,7 @@ const envSchema = z.object({
   YANDEX_IAM_TOKEN: z.string().optional(),
   YANDEX_API_KEY: z.string().optional(),
   /** Если `false` — отключена саморегистрация мастера по паролю */
-  OWNER_PASSWORD_REGISTRATION_ENABLED: z.string().optional(),
+  OWNER_PASSWORD_REGISTRATION_ENABLED: z.enum(["true", "false"]).optional(),
 });
 
 export function validateEnv(config: Record<string, unknown>) {

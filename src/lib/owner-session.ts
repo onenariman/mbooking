@@ -4,10 +4,17 @@ import { jwtVerify } from "jose";
 export const OWNER_ACCESS_COOKIE = "mbooking_owner_access";
 export const OWNER_REFRESH_COOKIE = "mbooking_owner_refresh";
 
+/** Отдельные cookie, чтобы сессия кабинета клиента не затирала сессию мастера. */
+export const CLIENT_PORTAL_ACCESS_COOKIE = "mbooking_client_portal_access";
+export const CLIENT_PORTAL_REFRESH_COOKIE = "mbooking_client_portal_refresh";
+
 /** 15m — как типичный access JWT в Nest */
 export const OWNER_ACCESS_COOKIE_MAX_AGE = 60 * 15;
 /** 30d */
 export const OWNER_REFRESH_COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
+
+export const CLIENT_PORTAL_ACCESS_COOKIE_MAX_AGE = OWNER_ACCESS_COOKIE_MAX_AGE;
+export const CLIENT_PORTAL_REFRESH_COOKIE_MAX_AGE = OWNER_REFRESH_COOKIE_MAX_AGE;
 
 export type NestAccessPayload = {
   sub: string;
@@ -44,11 +51,26 @@ export async function verifyNestAccessToken(
   }
 }
 
-export async function getNestAccessFromRequest(
+export async function getOwnerAccessFromRequest(
   request: NextRequest,
 ): Promise<NestAccessPayload | null> {
   return verifyNestAccessToken(request.cookies.get(OWNER_ACCESS_COOKIE)?.value);
 }
 
-/** @deprecated используйте getNestAccessFromRequest */
-export const getNestOwnerFromRequest = getNestAccessFromRequest;
+export async function getClientPortalAccessFromRequest(
+  request: NextRequest,
+): Promise<NestAccessPayload | null> {
+  return verifyNestAccessToken(
+    request.cookies.get(CLIENT_PORTAL_ACCESS_COOKIE)?.value,
+  );
+}
+
+/** Cookie мастера (BFF `/api/nest-v1`, защита админ-маршрутов). */
+export async function getNestAccessFromRequest(
+  request: NextRequest,
+): Promise<NestAccessPayload | null> {
+  return getOwnerAccessFromRequest(request);
+}
+
+/** @deprecated используйте getOwnerAccessFromRequest */
+export const getNestOwnerFromRequest = getOwnerAccessFromRequest;

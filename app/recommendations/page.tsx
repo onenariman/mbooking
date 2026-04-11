@@ -1,8 +1,10 @@
 import RecommendationsSection from "@/components/Recommendations";
+import { requireOwnerPageSession } from "@/src/server/owner-page-guard";
 
-const RecommendationsPage = () => {
+const RecommendationsPage = async () => {
+  await requireOwnerPageSession();
   return (
-    <div className="flex flex-col gap-y-5 min-h-dvh pb-15 w-full mx-auto">
+    <div className="mx-auto w-full max-w-2xl pb-24 md:max-w-5xl md:pb-10 min-h-dvh">
       <RecommendationsSection />
     </div>
   );

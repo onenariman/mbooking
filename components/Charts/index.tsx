@@ -14,10 +14,8 @@ import AppointmentsByDayChart from "./charts/AppointmentsByDayChart";
 import RevenueByServiceChart from "./charts/RevenueByServiceChart";
 import CategoryFilter from "./filters/CategoryFilter";
 import DateRangeFilter from "./filters/DateRangeFilter";
-import {
-  buildDateFilter,
-} from "./lib/analytics";
-import { getDefaultRange } from "./lib/constants";
+import { buildDateFilter } from "./lib/analytics";
+import { currencyFormatter, getDefaultRange, getRangeLabel } from "./lib/constants";
 import MetricsCards from "./metrics/MetricsCards";
 import CategoriesSummary from "./summary/CategoriesSummary";
 import RevenueLossCard from "./summary/RevenueLossCard";
@@ -71,7 +69,10 @@ export default function ChartsSection() {
         headers: { "Content-Type": "application/json" },
       });
 
-      const payload = (await response.json()) as { data?: ChartsOverviewResponse["data"]; message?: string };
+      const payload = (await response.json()) as {
+        data?: ChartsOverviewResponse["data"];
+        message?: string;
+      };
       if (!response.ok) {
         throw new Error(payload.message || "Не удалось загрузить аналитику");
       }
@@ -96,24 +97,30 @@ export default function ChartsSection() {
   const categoryLabel =
     activeCategory === "all" ? "все категории" : activeCategory;
 
+  const metricsSubtitle = useMemo(() => {
+    const period = getRangeLabel(range);
+    if (activeCategory === "all") {
+      return `${period}. Все категории.`;
+    }
+    if (overallMetrics) {
+      return `${period}. Фильтр: «${activeCategory}». Выручка по всем категориям за период: ${currencyFormatter.format(overallMetrics.revenue)}.`;
+    }
+    return `${period}. Категория: «${activeCategory}».`;
+  }, [range, activeCategory, overallMetrics]);
+
   if (isLoading) {
     return (
-      <div className="grid gap-4">
-        <Skeleton className="h-10 w-72" />
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, idx) => (
-            <Skeleton key={idx} className="h-32 w-full rounded-2xl" />
-          ))}
-        </div>
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Skeleton className="h-80 w-full rounded-2xl" />
-          <Skeleton className="h-80 w-full rounded-2xl" />
-        </div>
+      <div className="flex flex-col gap-4">
+        <Skeleton className="h-36 w-full rounded-2xl" />
+        <Skeleton className="h-64 w-full rounded-2xl" />
+        <Skeleton className="h-48 w-full rounded-2xl" />
+        <Skeleton className="h-56 w-full rounded-2xl" />
+        <Skeleton className="h-48 w-full rounded-2xl" />
       </div>
     );
   }
 
-  if (isError || !overallMetrics || !selectedMetrics || !revenueLossMetrics) {
+  if (isError || !selectedMetrics || !revenueLossMetrics || !overallMetrics) {
     return (
       <Card>
         <CardHeader>
@@ -127,63 +134,48 @@ export default function ChartsSection() {
   }
 
   return (
-    <div className="flex flex-col gap-4 pb-8">
+    <div className="flex flex-col gap-4">
       <Card>
-        <CardHeader>
-          <CardTitle>Фильтры аналитики</CardTitle>
-          <CardDescription>
-            Выберите период и категорию, чтобы увидеть детальную статистику, при
-            этом общая сводка всегда показывается отдельно.
-          </CardDescription>
-          <DateRangeFilter
-            range={range}
-            onChange={setRange}
-            onResetToCurrentMonth={() => setRange(getDefaultRange())}
-            hasSelectedRange={hasSelectedRange}
-          />
-          <CategoryFilter
-            categoryOptions={categoryOptions}
-            activeCategory={activeCategory}
-            onChange={setSelectedCategory}
-          />
+        <CardHeader className="space-y-3 pb-3">
+          <div>
+            <CardTitle className="text-lg">Период и категория</CardTitle>
+            <CardDescription className="text-xs leading-relaxed">
+              Графики и цифры ниже считаются по выбранным фильтрам.
+            </CardDescription>
+          </div>
+          <div className="flex flex-col gap-3">
+            <DateRangeFilter
+              range={range}
+              onChange={setRange}
+              onResetToCurrentMonth={() => setRange(getDefaultRange())}
+              hasSelectedRange={hasSelectedRange}
+            />
+            <CategoryFilter
+              categoryOptions={categoryOptions}
+              activeCategory={activeCategory}
+              onChange={setSelectedCategory}
+            />
+          </div>
         </CardHeader>
       </Card>
 
       <MetricsCards
-        title="Общая статистика"
-        subtitle="Все категории в выбранном периоде"
-        metrics={overallMetrics}
-      />
-
-      <MetricsCards
-        title={
-          activeCategory === "all"
-            ? "Статистика по всем категориям"
-            : `Статистика категории: ${activeCategory}`
-        }
-        subtitle={
-          activeCategory === "all"
-            ? "Сейчас выбраны все категории"
-            : "Детальные метрики только по выбранной категории"
-        }
+        title="Ключевые показатели"
+        subtitle={metricsSubtitle}
         metrics={selectedMetrics}
       />
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <AppointmentsByDayChart
-          data={appointmentsByDay}
-          categoryLabel={categoryLabel}
-        />
-        <RevenueByServiceChart
-          data={revenueByService}
-          categoryLabel={categoryLabel}
-        />
-      </div>
-
-      <StatusSummary
-        statusSummary={statusSummary}
+      <AppointmentsByDayChart
+        data={appointmentsByDay}
         categoryLabel={categoryLabel}
       />
+
+      <RevenueByServiceChart
+        data={revenueByService}
+        categoryLabel={categoryLabel}
+      />
+
+      <StatusSummary statusSummary={statusSummary} categoryLabel={categoryLabel} />
 
       <RevenueLossCard
         metrics={revenueLossMetrics}

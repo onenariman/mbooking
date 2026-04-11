@@ -7,7 +7,6 @@ import {
   refreshOwnerSessionFromCookies,
   setOwnerSessionFromNestTokens,
 } from "@/app/actions/owner-auth.actions";
-import { clearNestTokens } from "@/src/utils/api/nestOwnerApi";
 
 export function NestDevAuthClient() {
   const router = useRouter();
@@ -51,7 +50,6 @@ export function NestDevAuthClient() {
         setStatus(json.message || res.statusText || "Ошибка входа");
         return;
       }
-      clearNestTokens();
       await setOwnerSessionFromNestTokens(json.accessToken, json.refreshToken);
       setStatus("Сессия записана в httpOnly cookie. Можно открыть раздел клиентов.");
       router.refresh();
@@ -63,7 +61,6 @@ export function NestDevAuthClient() {
   };
 
   const onLogout = async () => {
-    clearNestTokens();
     await ownerLogout();
     setStatus("Сессия и cookie очищены.");
     router.refresh();
@@ -123,7 +120,7 @@ export function NestDevAuthClient() {
           Обновить access (refresh из cookie)
         </button>
         <button type="button" onClick={() => void onLogout()} disabled={busy}>
-          Выйти (cookie + localStorage)
+          Выйти
         </button>
       </div>
       {status ? (

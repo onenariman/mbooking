@@ -17,5 +17,5 @@ export async function login(formData: FormData) {
   }
 
   await setOwnerSessionCookies(result.accessToken, result.refreshToken);
-  redirect("/");
+  redirect("/receptions");
 }

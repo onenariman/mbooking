@@ -19,35 +19,43 @@ export default function CategoriesSummary({
   activeCategory,
 }: CategoriesSummaryProps) {
   return (
-    <Card size="sm">
-      <CardHeader>
-        <CardTitle>Все категории за период</CardTitle>
-        <CardDescription>
-          Быстрый срез по каждой категории: записи, завершения, выручка и доля в общей выручке.
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg">Категории за период</CardTitle>
+        <CardDescription className="text-xs leading-relaxed">
+          Записи, завершения и доля выручки — один блок на категорию.
         </CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-3">
+      <CardContent className="flex flex-col gap-2">
         {categoriesSummary.length === 0 ? (
-          <p className="py-4 text-sm text-muted-foreground">В выбранном периоде нет данных.</p>
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            В выбранном периоде нет данных.
+          </p>
         ) : (
           categoriesSummary.map((item) => (
             <div
               key={item.category}
               className={cn(
-                "grid gap-2 rounded-xl border p-3 text-sm sm:grid-cols-4 sm:items-center",
-                activeCategory === item.category && "border-primary",
+                "flex flex-col gap-2 rounded-xl border border-border/70 px-3 py-3 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between",
+                activeCategory === item.category && "border-primary/50 bg-primary/5",
               )}
             >
-              <div className="font-medium">{item.category}</div>
-              <div className="text-muted-foreground">
-                Записи: <span className="text-foreground">{item.totalAppointments}</span>
-              </div>
-              <div className="text-muted-foreground">
-                Завершено: <span className="text-foreground">{item.completedAppointments}</span>
-              </div>
-              <div className="text-muted-foreground">
-                {currencyFormatter.format(item.revenue)} (
-                {percentFormatter.format(item.revenueShare)}%)
+              <div className="font-semibold">{item.category}</div>
+              <div className="flex flex-col gap-1 text-xs text-muted-foreground sm:flex-row sm:gap-4 sm:text-sm">
+                <span>
+                  Записей:{" "}
+                  <span className="font-medium text-foreground">{item.totalAppointments}</span>
+                </span>
+                <span>
+                  Завершено:{" "}
+                  <span className="font-medium text-foreground">{item.completedAppointments}</span>
+                </span>
+                <span className="text-foreground">
+                  {currencyFormatter.format(item.revenue)}{" "}
+                  <span className="text-muted-foreground">
+                    ({percentFormatter.format(item.revenueShare)}%)
+                  </span>
+                </span>
               </div>
             </div>
           ))

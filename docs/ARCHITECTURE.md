@@ -1,122 +1,61 @@
 # Архитектура проекта Mbooking
 
-Документ отражает текущее состояние кода и базы. Предназначен для передачи разработчику для аудита и рекомендаций.
+Документ описывает текущее рабочее состояние проекта после миграции owner-части и клиентского кабинета на Nest + Prisma.
 
-## 1) Стек и основные технологии
-- Next.js 16 (App Router).
-- React, TypeScript.
-- Supabase (PostgreSQL + Auth + RLS).
-- TanStack Query.
-- Zod (валидации и схемы DTO).
-- UI: shadcn/ui + Recharts.
-- AI: Ollama или YandexGPT (по `AI_PROVIDER`).
+## 1) Стек
+- Next.js 16 (App Router, `proxy.ts`).
+- React, TypeScript, TanStack Query, Zod.
+- NestJS в `backend/`.
+- Prisma + PostgreSQL.
+- UI: shadcn/ui, Recharts.
 
 ## 2) Структура репозитория
-- `app/` — страницы и route handlers.
-- `components/` — UI и фичи по доменам (Reception, Clients, Services, Categories, Charts, Recommendations, Feedback).
-- `src/api/` — тонкие API-функции на клиенте.
-- `src/hooks/` — TanStack Query хуки поверх `src/api`.
-- `src/schemas/` и `src/validators/` — Zod-схемы.
-- `src/utils/supabase/` — клиент Supabase (browser/server) и middleware.
-- `supabase/migrations/` — SQL-миграции.
-- `types/database.types.ts` — автогенерируемые типы БД.
+- `app/` — страницы, server actions и route handlers фронтенда.
+- `components/` — UI и feature-компоненты.
+- `src/api/` — клиентские API-обёртки поверх same-origin BFF.
+- `src/server/` — server-side helper'ы для Nest, cookie/session logic, SSR context.
+- `backend/src/` — NestJS модули, контроллеры, guards, DTO, Prisma service.
+- `backend/prisma/` — Prisma schema, seed и миграционная логика backend.
+- `docs/migration-status/` — актуальный handoff и статус миграции.
 
-## 3) Навигация и маршруты
-Основные страницы:
-- `/` → редирект на `/receptions`.
-- `/login` — логин (server action).
-- `/receptions` — записи на приём.
-- `/clients`, `/services`, `/categories` — справочники.
-- `/charts` — аналитика.
-- `/recommendations` + подстраницы — AI-рекомендации.
-- `/feedback/[token]` — публичная форма отзывов.
+## 3) Маршруты
+- `/` и `/login` — вход мастера.
+- `/register` — регистрация мастера, если она не отключена env-конфигом.
+- `/receptions`, `/clients`, `/services`, `/categories`, `/charts`, `/recommendations/*` — owner-зона.
+- `/client/login` и `/client/invite/[token]` — публичные entry points клиентского кабинета.
+- `/client`, `/client/appointments`, `/client/discounts`, `/client/settings` — protected client portal.
+- `/feedback/[token]` — публичная feedback-форма.
 
-## 4) Аутентификация и доступ
-- Корневой `proxy.ts` включает Supabase SSR сессию и редиректы.
-- `src/utils/supabase/middleware.ts`:
-  - если нет пользователя и путь не `/login` и не `/feedback/*` → редирект на `/login`.
-  - если пользователь есть и путь `/login` → редирект на `/`.
-- Публичный маршрут: `/feedback/[token]`.
+## 4) Auth и сессии
+- Есть две независимые httpOnly-сессии:
+  - owner: `mbooking_owner_access`, `mbooking_owner_refresh`
+  - client portal: `mbooking_client_portal_access`, `mbooking_client_portal_refresh`
+- Access token — JWT Nest с `type: "access"`.
+- Refresh token — opaque string, хранится в БД только как hash.
+- `proxy.ts` на Next 16 разделяет owner/client маршруты, делает redirect по роли и умеет обновлять access через refresh-cookie.
+- Owner-страницы дополнительно защищены server-side helper'ом, чтобы не зависеть только от edge-периметра.
 
-## 5) Клиентский слой данных
-Схема потока:
-`components` → `hooks` (TanStack Query) → `src/api/*` → Supabase/Route Handlers.
+## 5) Фронтендовый transport
+- Авторизованные запросы owner идут через `/api/nest-v1/*`.
+- Авторизованные запросы client portal идут через `/api/nest-v1-client/*`.
+- Общий BFF-прокси находится в `src/server/nest-v1-forward.ts`.
+- Публичные браузерные вызовы к Nest выполняются через `nestPublicV1Fetch(...)` и требуют `NEXT_PUBLIC_NEST_API_URL`.
+- Токены не хранятся в `localStorage` в основном runtime flow.
 
-Кэширование:
-`src/lib/queryConfig.ts` определяет `staleTime` для reference/live/analytics/feedback/recommendations.
+## 6) Backend
+- `backend/src/modules/auth/` — register, login, refresh, logout, me.
+- `backend/src/modules/client-portal/` — invite/activate + client portal API.
+- `backend/src/modules/appointments/`, `clients/`, `categories/`, `services/`, `discounts/`, `feedback/`, `push/`, `recommendations/` — доменные модули.
+- Публичные auth/invite endpoints дополнительно ограничены rate limiting через `@nestjs/throttler`.
 
-Ошибки:
-`src/helpers/getErrorMessage.ts` — mapSupabaseError, mapLlmError, getErrorMessage.
+## 7) Данные и BFF
+- Owner UI работает через `src/api/*` → same-origin BFF → Nest `/v1/*`.
+- Client portal SSR использует server-side context из `client/server/context.ts` (код кабинета сгруппирован в папке `client/` рядом с `backend/`).
+- `app/api/charts/overview` остаётся фронтовым route handler'ом, но данные получает из Nest по owner-сессии.
 
-## 6) Серверные API (Route Handlers)
-Справочники (CRUD, валидируются Zod):
-- `GET/POST/PATCH/DELETE /api/clients`
-- `GET/POST/PATCH/DELETE /api/services`
-- `GET/POST/PATCH/DELETE /api/categories`
-
-Аналитика:
-- `GET /api/charts/overview` — агрегаты для `/charts` (appointments, clients, revenue).
-
-Отзывы:
-- `POST /api/feedback/token` — генерация токена (RPC `create_feedback_token`).
-- `POST /api/feedback/submit` — отправка отзыва (RPC `submit_feedback`).
-- `GET /api/feedback/responses` — список отзывов за период.
-- `GET /api/feedback/ratings` — агрегированные рейтинги.
-
-Рекомендации:
-- `GET /api/recommendations` — список рекомендаций.
-- `DELETE /api/recommendations?id=...` — удалить рекомендацию.
-- `POST /api/recommendations/jobs` — создать задачу генерации.
-- `GET /api/recommendations/jobs/:id` — получить статус.
-- `POST /api/recommendations/jobs/:id/run` — выполнить задачу.
-- `POST /api/recommendations/generate` — алиас на создание задачи.
-
-## 7) Supabase: таблицы и RLS
-Ключевые таблицы:
-- `appointments` — записи, привязаны к `user_id`.
-- `clients` — клиенты, `user_id`.
-- `services` — услуги, `user_id`.
-- `categories` — категории, `user_id`.
-- `feedback_tokens` — одноразовые токены.
-- `feedback_responses` — отзывы.
-- `ai_recommendations` — сохранённые рекомендации.
-- `recommendation_jobs` — очередь генерации.
-
-RLS:
-- Включён на всех таблицах.
-- Политики вида `auth.uid() = user_id`, роли `authenticated`.
-
-RPC:
-- `create_feedback_token(expires_in)` — выдача токена.
-- `submit_feedback(...)` — запись отзыва.
-- `cleanup_recommendation_jobs(interval)` — автоочистка очереди.
-
-## 8) Ограничения и инварианты БД
-- Уникальность слота в `appointments`: `(user_id, appointment_at, service_name)`.
-- Ограничение длины `feedback_text`: 1000 символов (проверка на уровне функции).
-- Рекомендации и отзывы всегда хранят `user_id` (мульти‑тенант).
-
-## 9) AI-рекомендации (флоу)
-1. Клиент создаёт job через `/api/recommendations/jobs`.
-2. Клиент запускает выполнение через `/api/recommendations/jobs/:id/run`.
-3. Сервер:
-   - выгружает отзывы за период,
-   - строит промпт (`src/server/recommendations.ts`),
-   - вызывает LLM (Ollama/Yandex),
-   - сохраняет результат в `ai_recommendations`,
-   - обновляет `recommendation_jobs` (status + метрики).
-
-Ограничения:
-- `MAX_FEEDBACK_ITEMS = 10`
-- `MAX_FEEDBACK_CHARS = 1000`
-- `MIN_FEEDBACK_COUNT = 3`
-
-Очистка:
-- `cleanup_recommendation_jobs('30 days')` запускается через `pg_cron`.
-
-## 10) Аналитика
-`/api/charts/overview` выполняет агрегаты на сервере и отдаёт готовые серии.
-Клиент не делает тяжёлых расчётов.
+## 8) Источник правды
+- Архитектура: этот файл.
+- Что осталось сделать: `docs/ROADMAP.md`.
 
 ## 11) Диагностика и DevTools
 `components/layout/AppShell.tsx` подключает:
@@ -134,16 +73,10 @@ RPC:
 - `20260316173000_cleanup_recommendation_jobs.sql` — cron-очистка.
 - `20260316174000_appointments_slot_model.sql` — упрощение модели слота, удаление архивирования.
 
-## 13) Переменные окружения
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY`
-- `AI_PROVIDER=ollama|yandex`
-- `OLLAMA_BASE_URL`, `OLLAMA_MODEL`
-- `YANDEX_FOLDER_ID`, `YANDEX_MODEL_URI`, `YANDEX_IAM_TOKEN` или `YANDEX_API_KEY`
+## 13) Переменные окружения (Next)
+- `NEST_API_INTERNAL_URL` — URL Nest для server-side (например `http://localhost:4000`)
+- `NEXT_PUBLIC_NEST_API_URL` — fallback / dev
+- `NEST_JWT_ACCESS_SECRET` — тот же секрет, что `JWT_ACCESS_SECRET` в Nest
+- `NEXT_PUBLIC_VAPID_PUBLIC_KEY` — для push-подписок в браузере
 
-## 14) Вопросы для ревью (что стоит обсудить)
-- Нужен ли фоновой воркер/cron для авто‑выполнения recommendation_jobs без участия клиента.
-- Нужно ли расширять server‑API на записи (appointments) или оставить прямой Supabase‑доступ.
-- Нужна ли агрегация аналитики в БД (материализованные представления).
-- Нужны ли rate‑limits на публичную форму отзывов.
-- Требуются ли дополнительные индексы под будущие отчёты.
+Переменные Nest — в `backend/.env.example`.

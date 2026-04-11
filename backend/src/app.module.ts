@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
+import { ThrottlerModule } from "@nestjs/throttler";
 import { appConfig } from "./config/app.config";
 import { validateEnv } from "./config/env.schema";
 import { AppointmentsModule } from "./modules/appointments/appointments.module";
@@ -22,6 +23,15 @@ import { PrismaModule } from "./prisma/prisma.module";
       cache: true,
       load: [appConfig],
       validate: validateEnv,
+    }),
+    ThrottlerModule.forRoot({
+      throttlers: [
+        {
+          name: "auth",
+          ttl: 60_000,
+          limit: 120,
+        },
+      ],
     }),
     PrismaModule,
     HealthModule,

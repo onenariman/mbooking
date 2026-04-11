@@ -11,6 +11,7 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    "backend/**",
     "next-env.d.ts",
     "components/ui/**", // Игнорируем автоматически созданные компоненты shadcn
   ]),

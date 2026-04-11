@@ -255,7 +255,7 @@ export function DropdownMenuClient({
         <DropdownMenuContent align="end" className="w-60">
           <DropdownMenuItem asChild disabled={!phone}>
             <Link href={`tel:${phone}`}>
-              <Phone className="mr-2 h-4 w-4" />
+              <Phone className="h-4 w-4 text-muted-foreground" />
               Позвонить
             </Link>
           </DropdownMenuItem>
@@ -265,7 +265,7 @@ export function DropdownMenuClient({
               target="_blank"
               rel="noopener noreferrer"
             >
-              <MessageCircle className="mr-2 h-4 w-4 text-green-500" />
+              <MessageCircle className="h-4 w-4 text-muted-foreground" />
               WhatsApp
             </Link>
           </DropdownMenuItem>
@@ -273,33 +273,30 @@ export function DropdownMenuClient({
             onClick={handleSendFeedback}
             disabled={isCreatingToken || (!phone.trim() && !whatsappPhone)}
           >
-            <Send className="mr-2 h-4 w-4 text-foreground" />
+            <Send className="h-4 w-4 text-muted-foreground" />
             Отзыв
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={handleSendClientInvite}
             disabled={isCreatingPortalInvite || (!phone.trim() && !whatsappPhone)}
           >
-            <KeyRound className="mr-2 h-4 w-4 text-sky-600" />
+            <KeyRound className="h-4 w-4 text-muted-foreground" />
             Пригласить в кабинет
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => setShowCreateDiscount(true)}
             disabled={!phone}
           >
-            <Percent className="mr-2 h-4 w-4 text-orange-500" />
+            <Percent className="h-4 w-4 text-muted-foreground" />
             Назначить скидку
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setShowEdit(true)}>
-            <Edit2Icon className="mr-2 h-4 w-4 text-blue-500" />
+            <Edit2Icon className="h-4 w-4 text-blue-500" />
             Изменить
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => setShowDelete(true)}
-            className="text-red-500 focus:bg-red-50 focus:text-red-600"
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
+          <DropdownMenuItem variant="destructive" onClick={() => setShowDelete(true)}>
+            <Trash2 />
             Удалить
           </DropdownMenuItem>
         </DropdownMenuContent>

@@ -14,9 +14,7 @@ export function FilterCategory({ value, onChange }: FilterCategoryProps) {
 
   if (isLoading) {
     return (
-      <Button disabled className="bg-transparent w-full">
-        <Skeleton className="h-8 w-full rounded-full bg-gray-200/80" />
-      </Button>
+      <Skeleton className="h-9 w-full rounded-full bg-muted/60" />
     );
   }
 

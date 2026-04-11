@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ClientSettingsForm } from "@/components/ClientPortal/ClientSettingsForm";
-import { getClientPortalContextFromSession } from "@/src/server/client-portal/context";
+import { ClientSettingsForm } from "@/client/components/ClientSettingsForm";
+import { getClientPortalContextFromSession } from "@/client/server/context";
 import { formatPhoneDisplay } from "@/src/validators/normalizePhone";
 
 export default async function ClientSettingsPage() {

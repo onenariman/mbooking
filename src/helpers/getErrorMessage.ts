@@ -1,18 +1,18 @@
 // Типобезопасный парсер ошибки и маппинг сообщений
 
-type SupabaseErrorLike = {
+type DbErrorLike = {
   message?: string;
   code?: string;
   details?: string;
   hint?: string;
 };
 
-const isSupabaseError = (error: unknown): error is SupabaseErrorLike => {
+const isDbErrorLike = (error: unknown): error is DbErrorLike => {
   return (
     typeof error === "object" &&
     error !== null &&
     "message" in error &&
-    typeof (error as SupabaseErrorLike).message === "string"
+    typeof (error as DbErrorLike).message === "string"
   );
 };
 
@@ -23,17 +23,18 @@ export function getErrorMessage(error: unknown, fallback = "Ошибка"): stri
   if (typeof error === "string" && error.trim().length > 0) {
     return error;
   }
-  if (isSupabaseError(error) && error.message) {
+  if (isDbErrorLike(error) && error.message) {
     return error.message;
   }
   return fallback;
 }
 
-export function mapSupabaseError(
+/** Сообщения по кодам PostgreSQL (PostgREST / Prisma и т.п.). */
+export function mapDatabaseError(
   error: unknown,
   fallback = "Ошибка базы данных",
 ): string {
-  if (isSupabaseError(error)) {
+  if (isDbErrorLike(error)) {
     const code = error.code;
     if (code === "23505") {
       return "Запись уже существует";

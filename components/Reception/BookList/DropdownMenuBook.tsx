@@ -273,24 +273,27 @@ export default function DropdownMenuBook({ book }: DropdownMenuBookProps) {
           <DropdownMenuItem
             onClick={() => setShowCompleteDialog(true)}
             disabled={isUpdatingStatus || !canComplete}
+            className="text-emerald-900 dark:text-emerald-200 focus:bg-emerald-500/12 focus:text-emerald-950 dark:focus:bg-emerald-500/18 dark:focus:text-emerald-50 focus:[&_svg]:text-emerald-600 dark:focus:[&_svg]:text-emerald-400"
           >
-            <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
+            <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
             Завершить...
           </DropdownMenuItem>
 
           <DropdownMenuItem
             onClick={() => handleChangeStatus("cancelled")}
             disabled={isUpdatingStatus || book.status === "cancelled"}
+            className="text-amber-950 dark:text-amber-100 focus:bg-amber-500/14 focus:text-amber-950 dark:focus:bg-amber-500/20 dark:focus:text-amber-50 focus:[&_svg]:text-amber-600 dark:focus:[&_svg]:text-amber-400"
           >
-            <XCircle className="mr-2 h-4 w-4 text-orange-500" />
+            <XCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
             Отменить
           </DropdownMenuItem>
 
           <DropdownMenuItem
             onClick={() => handleChangeStatus("no_show")}
             disabled={isUpdatingStatus || !canSetNoShow}
+            className="text-rose-950 dark:text-rose-100 focus:bg-rose-500/12 focus:text-rose-950 dark:focus:bg-rose-500/18 dark:focus:text-rose-50 focus:[&_svg]:text-rose-600 dark:focus:[&_svg]:text-rose-400"
           >
-            <UserX className="mr-2 h-4 w-4 text-red-500" />
+            <UserX className="h-4 w-4 text-rose-600 dark:text-rose-400" />
             Не пришел
           </DropdownMenuItem>
 
@@ -298,14 +301,14 @@ export default function DropdownMenuBook({ book }: DropdownMenuBookProps) {
 
           <DropdownMenuItem asChild>
             <a href={`sms:${phone}?&body=${encodedReminderMessage}`}>
-              <MessageCircle className="h-4 w-4 text-blue-500" />
+              <MessageCircle className="h-4 w-4 text-muted-foreground" />
               Сообщение
             </a>
           </DropdownMenuItem>
 
           <DropdownMenuItem asChild>
             <a href={`tel:${phone}`}>
-              <Phone className="h-4 w-4" />
+              <Phone className="h-4 w-4 text-muted-foreground" />
               Позвонить
             </a>
           </DropdownMenuItem>
@@ -314,7 +317,7 @@ export default function DropdownMenuBook({ book }: DropdownMenuBookProps) {
             onClick={handleSendFeedback}
             disabled={isCreatingToken || (!phone.trim() && !whatsappPhone)}
           >
-            <Send className="h-4 w-4 text-foreground" />
+            <Send className="h-4 w-4 text-muted-foreground" />
             Отзыв
           </DropdownMenuItem>
 
@@ -324,7 +327,7 @@ export default function DropdownMenuBook({ book }: DropdownMenuBookProps) {
               target="_blank"
               rel="noopener noreferrer"
             >
-              <MessageCircle className="h-4 w-4 text-green-500" />
+              <MessageCircle className="h-4 w-4 text-muted-foreground" />
               WhatsApp
             </a>
           </DropdownMenuItem>
@@ -336,11 +339,8 @@ export default function DropdownMenuBook({ book }: DropdownMenuBookProps) {
             Изменить
           </DropdownMenuItem>
 
-          <DropdownMenuItem
-            onClick={() => setShowDelete(true)}
-            className="text-red-500 focus:bg-red-50 focus:text-red-600"
-          >
-            <Trash2 className="h-4 w-4" />
+          <DropdownMenuItem variant="destructive" onClick={() => setShowDelete(true)}>
+            <Trash2 />
             Удалить
           </DropdownMenuItem>
 
@@ -348,7 +348,7 @@ export default function DropdownMenuBook({ book }: DropdownMenuBookProps) {
             <>
               <DropdownMenuSeparator />
               <div className="flex items-center px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                <Clock className="mr-1.5 h-3 w-3" />
+                <Clock className="mr-1.5 h-3 w-3 text-muted-foreground" />
                 Будущая запись
               </div>
             </>

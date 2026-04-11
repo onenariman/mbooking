@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import NavbarMenu from "@/components/Navbar";
+import { OwnerMobileNav } from "@/components/layout/OwnerMobileNav";
 import { TanstackProvider } from "@/components/providers/tanstack-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { Devtools } from "@/src/devtools/devtools";
@@ -24,7 +25,7 @@ export default function AppShell({ children }: AppShellProps) {
 
   if (isPublicFeedbackRoute || isClientRoute) {
     return (
-      <main className="mx-auto mt-5 max-w-5xl px-4">
+      <main className="mx-auto mt-5 max-w-2xl px-4 md:max-w-5xl">
         <TanstackProvider>
           {children}
           <Devtools />
@@ -45,10 +46,10 @@ export default function AppShell({ children }: AppShellProps) {
 
   return (
     <>
-      <header className="mx-auto mt-5 max-w-5xl px-4">
+      <header className="mx-auto mt-5 max-w-2xl px-4 md:max-w-5xl">
         <nav className="flex items-center justify-between">
           <Link href="/">
-            <span className="cursor-pointer text-2xl font-medium tracking-wide transition-opacity hover:opacity-80">
+            <span className="cursor-pointer text-xl font-semibold tracking-tight transition-opacity hover:opacity-80 md:text-2xl">
               Reception
             </span>
           </Link>
@@ -56,13 +57,14 @@ export default function AppShell({ children }: AppShellProps) {
         </nav>
       </header>
 
-      <main className="mx-auto mt-5 max-w-5xl px-4">
+      <main className="mx-auto mt-5 max-w-2xl px-4 md:max-w-5xl">
         <TanstackProvider>
           {children}
           <Devtools />
         </TanstackProvider>
         <Toaster position="top-center" closeButton />
       </main>
+      <OwnerMobileNav />
     </>
   );
 }

@@ -76,28 +76,33 @@ export function EditBook({
           event: "rescheduled",
         });
       }
-      toast.success("Р—Р°РїРёСЃСЊ РѕР±РЅРѕРІР»РµРЅР°");
+      toast.success("Запись обновлена");
       onOpenChange(false);
     } catch (error) {
       if (error instanceof BookingOverlapError) {
-        toast.error("Р­С‚РѕС‚ СЃР»РѕС‚ СѓР¶Рµ Р·Р°РЅСЏС‚. Р’С‹Р±РµСЂРёС‚Рµ РґСЂСѓРіРѕРµ РІСЂРµРјСЏ");
+        toast.error("Этот слот уже занят. Выберите другое время");
         return;
       }
-      toast.error(getErrorMessage(error, "РћС€РёР±РєР° РїСЂРё СЃРѕС…СЂР°РЅРµРЅРёРё"));
+      toast.error(getErrorMessage(error, "Ошибка при сохранении"));
     }
   };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="top" className="overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>РР·РјРµРЅРёС‚СЊ Р·Р°РїРёСЃСЊ</SheetTitle>
+      <SheetContent
+        side="bottom"
+        className="mx-auto max-h-[min(92dvh,720px)] w-full max-w-lg overflow-y-auto rounded-t-3xl border-x-0 border-b-0 border-t bg-background px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 sm:max-w-2xl"
+      >
+        <SheetHeader className="space-y-1 border-b border-border/80 pb-4 text-left">
+          <SheetTitle className="text-xl font-semibold text-foreground">
+            Изменить запись
+          </SheetTitle>
           <SheetDescription>
-            РљР»РёРµРЅС‚: {book.client_name} ({book.service_name})
+            Клиент: {book.client_name} ({book.service_name})
           </SheetDescription>
         </SheetHeader>
 
-        <div className="px-6 flex flex-col gap-4">
+        <div className="flex flex-col gap-4 py-5">
           <DateBook
             startValue={appointmentAt}
             endValue={appointmentEnd}
@@ -108,45 +113,44 @@ export function EditBook({
           />
 
           <div className="space-y-2">
-            <Label>РЎС‚РѕРёРјРѕСЃС‚СЊ</Label>
+            <Label>Стоимость</Label>
             <Input
               value={amount ?? ""}
               onChange={(e) => {
                 const formatted = formatPriceInput(e.target.value);
-                const numeric = formatted.replace(/\\s/g, "");
+                const numeric = formatted.replace(/\s/g, "");
                 setAmount(numeric ? Number(numeric) : null);
               }}
             />
           </div>
 
           <div className="space-y-2">
-            <Label>РљРѕРјРјРµРЅС‚Р°СЂРёР№</Label>
+            <Label>Комментарий</Label>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
+              placeholder="Заметки…"
             />
           </div>
         </div>
 
-        <SheetFooter className="flex flex-col gap-2">
+        <SheetFooter className="flex flex-col gap-2 border-t pt-4">
           <Button
             onClick={handleSave}
             disabled={isPending || isRangeInvalid}
             className="w-full"
           >
-            {isPending ? <Spinner className="mr-2" /> : "РЎРѕС…СЂР°РЅРёС‚СЊ РёР·РјРµРЅРµРЅРёСЏ"}
+            {isPending ? <Spinner className="mr-2" /> : "Сохранить изменения"}
           </Button>
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
             className="w-full"
           >
-            РћС‚РјРµРЅР°
+            Отмена
           </Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>
   );
 }
-
-

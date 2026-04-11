@@ -1,6 +1,3 @@
-const ACCESS_KEY = "mbooking_nest_access_token";
-const REFRESH_KEY = "mbooking_nest_refresh_token";
-
 /**
  * Данные через Nest BFF. Отключить: NEXT_PUBLIC_USE_NEST_BFF=0
  */
@@ -46,28 +43,6 @@ export async function nestPublicV1Fetch(
   });
 }
 
-export function setNestTokens(access: string, refresh: string): void {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(ACCESS_KEY, access);
-  localStorage.setItem(REFRESH_KEY, refresh);
-}
-
-export function clearNestTokens(): void {
-  if (typeof window === "undefined") return;
-  localStorage.removeItem(ACCESS_KEY);
-  localStorage.removeItem(REFRESH_KEY);
-}
-
-export function getNestAccessToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(ACCESS_KEY);
-}
-
-export function getNestRefreshToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(REFRESH_KEY);
-}
-
 /**
  * Авторизованные запросы к Nest: same-origin `/api/nest-v1` + httpOnly JWT.
  */
@@ -80,6 +55,26 @@ export async function nestOwnerFetch(
   }
   const normalized = path.startsWith("/") ? path.slice(1) : path;
   const url = `/api/nest-v1/${normalized}`;
+  const headers = new Headers(init?.headers);
+  if (init?.body != null && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  return fetch(url, { ...init, headers, credentials: "include" });
+}
+
+/**
+ * Кабинет клиента: same-origin `/api/nest-v1-client` + отдельные httpOnly cookie,
+ * не пересекаются с сессией мастера.
+ */
+export async function nestClientPortalFetch(
+  path: string,
+  init?: RequestInit,
+): Promise<Response> {
+  if (!isNestBackendConfigured()) {
+    throw new Error("Nest BFF отключён (NEXT_PUBLIC_USE_NEST_BFF)");
+  }
+  const normalized = path.startsWith("/") ? path.slice(1) : path;
+  const url = `/api/nest-v1-client/${normalized}`;
   const headers = new Headers(init?.headers);
   if (init?.body != null && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");

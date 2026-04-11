@@ -46,15 +46,15 @@ const StatisticCard = () => {
 
   if (isLoading) {
     return (
-      <Button className="bg-transparent w-full">
-        <Skeleton className="h-8 w-full rounded-full bg-gray-200/80" />
-      </Button>
+      <div className="w-full py-1">
+        <Skeleton className="h-14 w-full rounded-2xl bg-muted/60" />
+      </div>
     );
   }
 
   if (stats.length === 0) {
     return (
-      <div className="rounded-xl border p-4 text-center">
+      <div className="rounded-2xl border border-dashed border-border/70 bg-muted/10 p-5 text-center text-sm text-muted-foreground">
         Сегодня ещё нет завершённых процедур
       </div>
     );
@@ -68,7 +68,7 @@ const StatisticCard = () => {
             {stats.map((item) => (
               <CarouselItem key={item.title}>
                 <div className="p-1">
-                  <Item variant="outline">
+                  <Item variant="outline" className="rounded-2xl border-border/70 shadow-sm">
                     <ItemContent>
                       <ItemTitle className="text-sm font-medium">
                         {item.title}

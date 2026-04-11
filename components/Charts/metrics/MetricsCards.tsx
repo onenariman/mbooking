@@ -21,52 +21,50 @@ export default function MetricsCards({
 }: MetricsCardsProps) {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{subtitle}</CardDescription>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg">{title}</CardTitle>
+        <CardDescription className="text-xs leading-relaxed">{subtitle}</CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card size="sm">
-          <CardHeader>
-            <CardDescription>Всего записей</CardDescription>
-            <CardTitle className="text-3xl">{metrics.totalAppointments}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Завершено {metrics.completedAppointmentsCount} из {metrics.totalAppointments}
-          </CardContent>
-        </Card>
+      <CardContent className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-xl border border-border/70 bg-card px-3 py-3 shadow-sm">
+          <div className="text-xs font-medium text-muted-foreground">Всего записей</div>
+          <div className="mt-1 text-2xl font-semibold tabular-nums">
+            {metrics.totalAppointments}
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Завершено {metrics.completedAppointmentsCount}
+          </p>
+        </div>
 
-        <Card size="sm">
-          <CardHeader>
-            <CardDescription>Клиенты</CardDescription>
-            <CardTitle className="text-3xl">{metrics.uniqueClientsCount}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Новые: {metrics.newClientsCount} | Повторные: {metrics.repeatClientsCount}
-          </CardContent>
-        </Card>
+        <div className="rounded-xl border border-border/70 bg-card px-3 py-3 shadow-sm">
+          <div className="text-xs font-medium text-muted-foreground">Клиенты</div>
+          <div className="mt-1 text-2xl font-semibold tabular-nums">
+            {metrics.uniqueClientsCount}
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Новые {metrics.newClientsCount} · Повторные {metrics.repeatClientsCount}
+          </p>
+        </div>
 
-        <Card size="sm">
-          <CardHeader>
-            <CardDescription>Выручка</CardDescription>
-            <CardTitle className="text-3xl">{currencyFormatter.format(metrics.revenue)}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Средний чек: {currencyFormatter.format(metrics.averageCheck)}
-          </CardContent>
-        </Card>
+        <div className="rounded-xl border border-border/70 bg-card px-3 py-3 shadow-sm">
+          <div className="text-xs font-medium text-muted-foreground">Выручка</div>
+          <div className="mt-1 text-2xl font-semibold tabular-nums leading-tight">
+            {currencyFormatter.format(metrics.revenue)}
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Средний чек {currencyFormatter.format(metrics.averageCheck)}
+          </p>
+        </div>
 
-        <Card size="sm">
-          <CardHeader>
-            <CardDescription>Конверсия в завершение</CardDescription>
-            <CardTitle className="text-3xl">
-              {percentFormatter.format(metrics.conversionToCompleted)}%
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
+        <div className="rounded-xl border border-border/70 bg-card px-3 py-3 shadow-sm">
+          <div className="text-xs font-medium text-muted-foreground">Завершение</div>
+          <div className="mt-1 text-2xl font-semibold tabular-nums">
+            {percentFormatter.format(metrics.conversionToCompleted)}%
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
             Отмены и неявки: {metrics.cancelledAppointments}
-          </CardContent>
-        </Card>
+          </p>
+        </div>
       </CardContent>
     </Card>
   );

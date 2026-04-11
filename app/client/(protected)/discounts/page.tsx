@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import {
   getClientPortalContextFromSession,
   getClientPortalDiscounts,
-} from "@/src/server/client-portal/context";
+} from "@/client/server/context";
 
 export default async function ClientDiscountsPage() {
   const context = await getClientPortalContextFromSession();

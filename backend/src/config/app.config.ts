@@ -11,6 +11,10 @@ export const appConfig = registerAs("app", () => ({
     /** Срок жизни opaque refresh-сессии в таблице `RefreshToken` */
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN ?? "30d",
   },
+  auth: {
+    ownerPasswordRegistrationEnabled:
+      process.env.OWNER_PASSWORD_REGISTRATION_ENABLED !== "false",
+  },
   /** Секрет для cron dispatch напоминаний (Bearer или x-cron-secret), как в Next CRON_SECRET */
   cronSecret: process.env.CRON_SECRET ?? "",
   vapid: {

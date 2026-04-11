@@ -34,8 +34,8 @@ export function DropdownMenuService({
             Изменить
           </DropdownMenuItem>
 
-          <DropdownMenuItem className="text-destructive" onClick={onDelete}>
-            <Trash2 className="h-4 w-4" />
+          <DropdownMenuItem variant="destructive" onClick={onDelete}>
+            <Trash2 />
             Удалить
           </DropdownMenuItem>
         </DropdownMenuContent>

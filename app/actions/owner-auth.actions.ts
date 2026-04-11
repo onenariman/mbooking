@@ -1,6 +1,7 @@
 "use server";
 
 import { OWNER_REFRESH_COOKIE } from "@/src/lib/owner-session";
+import { refreshNestSessionTokens } from "@/src/server/nest-session";
 import { getNestServerBaseUrl } from "@/src/server/nest-internal";
 import {
   clearOwnerSessionCookies,
@@ -47,23 +48,10 @@ export async function refreshOwnerSessionFromCookies(): Promise<{
   if (!base) {
     return { ok: false, message: "Nest не настроен" };
   }
-  const res = await fetch(`${base}/v1/auth/refresh`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${refresh}` },
-    cache: "no-store",
-  });
-  const json = (await res.json().catch(() => ({}))) as {
-    accessToken?: string;
-    refreshToken?: string;
-    message?: unknown;
-  };
-  if (!res.ok || !json.accessToken || !json.refreshToken) {
-    const msg =
-      typeof json.message === "string"
-        ? json.message
-        : "Не удалось обновить сессию";
-    return { ok: false, message: msg };
+  const tokens = await refreshNestSessionTokens(refresh);
+  if (!tokens) {
+    return { ok: false, message: "Не удалось обновить сессию" };
   }
-  await setOwnerSessionCookies(json.accessToken, json.refreshToken);
+  await setOwnerSessionCookies(tokens.accessToken, tokens.refreshToken);
   return { ok: true };
 }

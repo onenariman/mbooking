@@ -3,7 +3,8 @@ import {
   getClientPortalContextFromSession,
   getClientPortalDiscounts,
   touchClientPortalSession,
-} from "@/src/server/client-portal/context";
+} from "@/client/server/context";
+import { applySessionCookiesToResponse } from "@/src/server/owner-session-cookies";
 
 export async function GET() {
   const context = await getClientPortalContextFromSession();
@@ -18,7 +19,15 @@ export async function GET() {
   try {
     await touchClientPortalSession(context);
     const data = await getClientPortalDiscounts(context);
-    return NextResponse.json({ data });
+    const response = NextResponse.json({ data });
+    if (context.sessionUpdate) {
+      applySessionCookiesToResponse(
+        response,
+        "client_portal",
+        context.sessionUpdate,
+      );
+    }
+    return response;
   } catch (error) {
     return NextResponse.json(
       {

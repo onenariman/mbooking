@@ -25,7 +25,11 @@ export class AuthService {
   ) {}
 
   async register(dto: LoginDto) {
-    if (process.env.OWNER_PASSWORD_REGISTRATION_ENABLED === "false") {
+    if (
+      !this.configService.getOrThrow<boolean>(
+        "app.auth.ownerPasswordRegistrationEnabled",
+      )
+    ) {
       throw new ForbiddenException("Регистрация по паролю отключена");
     }
 

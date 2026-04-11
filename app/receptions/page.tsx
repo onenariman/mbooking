@@ -1,10 +1,16 @@
 import ReceptionComponents from "@/components/Reception";
+import { PageShell } from "@/components/layout/page-shell";
+import { requireOwnerPageSession } from "@/src/server/owner-page-guard";
 
-const ReceptionPage = () => {
+const ReceptionPage = async () => {
+  await requireOwnerPageSession();
   return (
-    <div className="flex flex-col gap-y-5 min-h-dvh pb-15 w-full mx-auto">
+    <PageShell
+      title="Записи"
+      description="Расписание, фильтры и действия по визитам."
+    >
       <ReceptionComponents />
-    </div>
+    </PageShell>
   );
 };
 

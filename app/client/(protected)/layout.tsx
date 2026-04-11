@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
-import { ClientPortalHeader } from "@/components/ClientPortal/ClientPortalHeader";
+import { ClientPortalHeader } from "@/client/components/ClientPortalHeader";
 import { formatPhoneDisplay } from "@/src/validators/normalizePhone";
-import { getClientPortalContextFromSession } from "@/src/server/client-portal/context";
+import { getClientPortalContextFromSession } from "@/client/server/context";
 
 export default async function ClientProtectedLayout({
   children,

@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
+import { requireOwnerPageSession } from "@/src/server/owner-page-guard";
 
-export default function RangeRecommendationsPage() {
+export default async function RangeRecommendationsPage() {
+  await requireOwnerPageSession();
   redirect("/recommendations");
 }

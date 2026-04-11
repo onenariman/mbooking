@@ -14,8 +14,8 @@ import { Skeleton } from "../ui/skeleton";
 const AddBook = dynamic(() => import("./AddBook/AddBook"), {
   ssr: false,
   loading: () => (
-    <Button disabled className="bg-transparent w-full">
-      <Skeleton className="h-8 w-full rounded-full bg-gray-200/80" />
+    <Button disabled className="w-full bg-transparent" variant="ghost">
+      <Skeleton className="h-11 w-full rounded-xl bg-muted/60" />
     </Button>
   ),
 });
@@ -23,8 +23,8 @@ const AddBook = dynamic(() => import("./AddBook/AddBook"), {
 const FilterDate = dynamic(() => import("./Filters/FilterDate"), {
   ssr: false,
   loading: () => (
-    <Button disabled className="bg-transparent w-full">
-      <Skeleton className="h-8 w-full rounded-full bg-gray-200/80" />
+    <Button disabled className="w-full bg-transparent" variant="ghost">
+      <Skeleton className="h-11 w-full rounded-xl bg-muted/60" />
     </Button>
   ),
 });

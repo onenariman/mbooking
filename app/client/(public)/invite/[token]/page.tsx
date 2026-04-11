@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ClientInviteActivationForm } from "@/components/ClientPortal/ClientInviteActivationForm";
+import { ClientInviteActivationForm } from "@/client/components/ClientInviteActivationForm";
 
 export default async function ClientInvitePage({
   params,

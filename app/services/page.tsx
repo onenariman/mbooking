@@ -1,11 +1,13 @@
 import Service from "@/components/Service";
+import { PageShell } from "@/components/layout/page-shell";
+import { requireOwnerPageSession } from "@/src/server/owner-page-guard";
 
-const ServicesPage = () => {
+const ServicesPage = async () => {
+  await requireOwnerPageSession();
   return (
-    <div className="flex flex-col gap-y-5 py-4 min-h-screen">
-      <h1 className="text-2xl font-bold">Мои услуги</h1>
+    <PageShell title="Услуги" description="Цены и привязка к категориям.">
       <Service />
-    </div>
+    </PageShell>
   );
 };
 

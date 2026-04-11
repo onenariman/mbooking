@@ -7,7 +7,7 @@ import {
   getClientPortalAppointments,
   getClientPortalContextFromSession,
   getClientPortalDiscounts,
-} from "@/src/server/client-portal/context";
+} from "@/client/server/context";
 import { formatAppointmentLabel } from "@/src/lib/appointments/formatAppointmentLabel";
 import { getAppointmentStatusLabel } from "@/src/lib/appointments/getAppointmentStatusLabel";
 

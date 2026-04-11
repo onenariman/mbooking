@@ -1,6 +1,6 @@
 "use client";
 
-import { Users } from "lucide-react";
+import { PieChart } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -10,38 +10,42 @@ import {
 } from "@/components/ui/card";
 import { statusLabels, statusLabelsFull } from "../lib/constants";
 import type { StatusSummaryItem } from "../lib/types";
-import StatusDonutChart from "./StatusDonutChart";
 
 type StatusSummaryProps = {
   statusSummary: StatusSummaryItem[];
   categoryLabel: string;
 };
 
+/** Без donut: только сетка карточек — меньше Recharts, один столбец на мобильном. */
 export default function StatusSummary({
   statusSummary,
   categoryLabel,
 }: StatusSummaryProps) {
   return (
-    <Card size="sm">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Users className="h-4 w-4" />
-          Разбивка по статусам
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <PieChart className="h-4 w-4 shrink-0 text-primary" />
+          Статусы записей
         </CardTitle>
-        <CardDescription>По категории: {categoryLabel}.</CardDescription>
+        <CardDescription className="text-xs">
+          Категория: {categoryLabel}.
+        </CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
-        <StatusDonutChart statusSummary={statusSummary} />
-        <div className="grid gap-3 sm:grid-cols-2">
+      <CardContent>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {statusSummary.map((item) => (
-            <div key={item.key} className="rounded-xl border p-3">
+            <div
+              key={item.key}
+              className="flex items-center justify-between rounded-xl border border-border/70 bg-muted/10 px-3 py-3"
+            >
               <div
-                className="text-xs text-muted-foreground"
+                className="text-xs font-medium text-muted-foreground"
                 title={statusLabelsFull[item.key]}
               >
                 {statusLabels[item.key]}
               </div>
-              <div className="mt-2 text-2xl font-semibold">{item.value}</div>
+              <div className="text-xl font-semibold tabular-nums">{item.value}</div>
             </div>
           ))}
         </div>

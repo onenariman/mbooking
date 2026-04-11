@@ -93,6 +93,9 @@ const NavbarMenu = () => {
             <DropdownMenuItem asChild>
               <Link href="/recommendations">Рекомендации</Link>
             </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/client/login">Кабинет клиента</Link>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link href="/categories">Категории</Link>
@@ -106,11 +109,11 @@ const NavbarMenu = () => {
             <DropdownMenuSeparator />
           </DropdownMenuGroup>
           <DropdownMenuItem
+            variant="destructive"
             onSelect={(event) => {
               event.preventDefault();
               void handleLogout();
             }}
-            className="text-red-700"
           >
             Выйти
           </DropdownMenuItem>

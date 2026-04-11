@@ -207,15 +207,17 @@ export default function AddBook() {
         </Button>
       </SheetTrigger>
       <SheetContent
-        side="top"
-        className="mx-auto min-h-fit max-w-5xl overflow-y-auto rounded-b-[2.5rem] border-none bg-background px-6"
+        side="bottom"
+        className="mx-auto max-h-[min(92dvh,720px)] w-full max-w-lg overflow-y-auto rounded-t-3xl border-x-0 border-b-0 border-t bg-background px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 sm:max-w-2xl"
       >
-        <SheetHeader className="pb-2 pt-4 text-white">
-          <SheetTitle className="text-2xl">Новая запись</SheetTitle>
-          <SheetDescription className="text-xs">Детали визита</SheetDescription>
+        <SheetHeader className="space-y-1 border-b border-border/80 pb-4 text-left">
+          <SheetTitle className="text-xl font-semibold text-foreground">
+            Новая запись
+          </SheetTitle>
+          <SheetDescription>Детали визита</SheetDescription>
         </SheetHeader>
 
-        <div className="flex flex-col gap-y-2 py-6">
+        <div className="flex flex-col gap-y-3 py-5">
           <DateBook
             startValue={form.appointment_at}
             endValue={form.appointment_end}
@@ -330,7 +332,6 @@ export default function AddBook() {
 
           <Input
             placeholder="Плановая стоимость услуги (₽)"
-            className="placeholder:text-black"
             value={form.amount ?? ""}
             onChange={(event) => {
               const numeric = formatPriceInput(event.target.value).replace(
@@ -343,8 +344,7 @@ export default function AddBook() {
 
           <Label>Комментарий</Label>
           <Textarea
-            className="placeholder:text-black"
-            placeholder="Заметки..."
+            placeholder="Заметки…"
             value={form.notes ?? ""}
             onChange={(event) => updateFormField("notes", event.target.value)}
           />

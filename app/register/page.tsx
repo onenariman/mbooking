@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getOwnerRegistrationEnabled } from "@/src/server/nest-session";
 
 export default function RegisterPage() {
-  if (process.env.NEXT_PUBLIC_OWNER_REGISTRATION_ENABLED === "false") {
+  if (!getOwnerRegistrationEnabled()) {
     redirect("/?error=registration-disabled");
   }
 

@@ -1,11 +1,13 @@
 import Category from "@/components/Category";
+import { PageShell } from "@/components/layout/page-shell";
+import { requireOwnerPageSession } from "@/src/server/owner-page-guard";
 
-const CategoriesPage = () => {
+const CategoriesPage = async () => {
+  await requireOwnerPageSession();
   return (
-    <div className="flex flex-col gap-y-5 py-4 min-h-screen">
-      <h1 className="text-2xl font-bold">Мои категории</h1>
+    <PageShell title="Категории" description="Группы услуг для расписания и отчётов.">
       <Category />
-    </div>
+    </PageShell>
   );
 };
 
