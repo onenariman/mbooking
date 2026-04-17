@@ -5,6 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import { ClientPortalInvitePurpose } from "@prisma/client";
 import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../../prisma/prisma.service";
 import {
@@ -60,11 +61,25 @@ export class ClientPortalInvitationsService {
       throw new BadRequestException("У клиента сохранен некорректный номер телефона");
     }
 
+    const purpose =
+      (dto.purpose as ClientPortalInvitePurpose | undefined) ??
+      ClientPortalInvitePurpose.activation;
+
+    if (purpose === ClientPortalInvitePurpose.password_reset) {
+      const portalProfile = await this.prisma.clientPortalProfile.findUnique({
+        where: { phone: clientPhone },
+      });
+      if (!portalProfile) {
+        throw new BadRequestException(
+          "Сброс пароля доступен только если клиент уже активировал кабинет",
+        );
+      }
+    }
+
     const token = randomBytes(32).toString("hex");
     const tokenHash = this.hashToken(token);
     const expiresInHours = dto.expires_in_hours ?? 24 * 7;
     const expiresAt = new Date(Date.now() + expiresInHours * 60 * 60 * 1000);
-    const purpose = dto.purpose ?? "activation";
 
     await this.prisma.clientPortalInvite.create({
       data: {
@@ -112,6 +127,94 @@ export class ClientPortalInvitationsService {
     }
 
     const invite = await this.getValidInvite(token);
+
+    if (invite.purpose === ClientPortalInvitePurpose.password_reset) {
+      return this.activatePasswordReset(invite, dto);
+    }
+
+    const email = dto.email?.trim().toLowerCase();
+    if (!email) {
+      throw new BadRequestException("Укажите email");
+    }
+
+    return this.activateNewAccount(invite, {
+      email,
+      password: dto.password,
+      confirm_password: dto.confirm_password,
+    });
+  }
+
+  private async activatePasswordReset(
+    invite: {
+      id: string;
+      clientPhone: string;
+      ownerUserId: string;
+      purpose: ClientPortalInvitePurpose;
+    },
+    dto: ActivateClientInvitationDto,
+  ) {
+    const passwordHash = await bcrypt.hash(dto.password, 10);
+    const now = new Date();
+
+    return this.prisma.$transaction(async (tx) => {
+      const profile = await tx.clientPortalProfile.findUnique({
+        where: { phone: invite.clientPhone },
+      });
+      if (!profile) {
+        throw new BadRequestException(
+          "Кабинет для этого номера не найден. Запросите новую ссылку у мастера.",
+        );
+      }
+
+      const user = await tx.user.findUnique({
+        where: { id: profile.authUserId },
+      });
+      if (!user || user.role !== "client_portal") {
+        throw new BadRequestException("Аккаунт не найден");
+      }
+
+      if (dto.email) {
+        if (dto.email.trim().toLowerCase() !== user.email.toLowerCase()) {
+          throw new BadRequestException("Email не совпадает с email входа в кабинет");
+        }
+      }
+
+      await tx.user.update({
+        where: { id: user.id },
+        data: { passwordHash, authType: "password" },
+      });
+
+      await tx.clientPortalProfile.update({
+        where: { authUserId: user.id },
+        data: { lastLoginAt: now },
+      });
+
+      await tx.clientPortalInvite.update({
+        where: { id: invite.id },
+        data: { usedAt: now },
+      });
+
+      return {
+        client_phone: invite.clientPhone,
+        client_phone_display: formatPhoneDisplay(invite.clientPhone),
+        client_name: profile.displayName,
+        owner_user_id: invite.ownerUserId,
+        purpose: invite.purpose,
+        login_email: user.email,
+      };
+    });
+  }
+
+  private async activateNewAccount(
+    invite: {
+      id: string;
+      clientPhone: string;
+      ownerUserId: string;
+      purpose: ClientPortalInvitePurpose;
+    },
+    dto: { email: string; password: string; confirm_password: string },
+  ) {
+    const email = dto.email.toLowerCase();
     const now = new Date();
 
     const result = await this.prisma.$transaction(async (tx) => {
@@ -127,18 +230,19 @@ export class ClientPortalInvitationsService {
           await tx.user.update({
             where: { id: authUserId },
             data: {
-              email: dto.email.toLowerCase(),
+              email,
               passwordHash,
               role: "client_portal",
               isActive: true,
+              authType: "password",
             },
           });
-        } catch (e) {
+        } catch {
           throw new ConflictException("Email уже используется");
         }
       } else {
         const existingUserByEmail = await tx.user.findUnique({
-          where: { email: dto.email.toLowerCase() },
+          where: { email },
         });
         if (existingUserByEmail && existingUserByEmail.role !== "client_portal") {
           throw new ConflictException("Email уже используется");
@@ -147,15 +251,21 @@ export class ClientPortalInvitationsService {
           authUserId = existingUserByEmail.id;
           await tx.user.update({
             where: { id: authUserId },
-            data: { passwordHash, isActive: true, role: "client_portal" },
+            data: {
+              passwordHash,
+              isActive: true,
+              role: "client_portal",
+              authType: "password",
+            },
           });
         } else {
           const created = await tx.user.create({
             data: {
-              email: dto.email.toLowerCase(),
+              email,
               passwordHash,
               role: "client_portal",
               isActive: true,
+              authType: "password",
             },
           });
           authUserId = created.id;
@@ -169,9 +279,9 @@ export class ClientPortalInvitationsService {
       const displayName = existingProfile?.displayName ?? client?.name ?? null;
 
       await tx.clientPortalProfile.upsert({
-        where: { authUserId },
+        where: { authUserId: authUserId! },
         create: {
-          authUserId,
+          authUserId: authUserId!,
           phone: invite.clientPhone,
           displayName,
           lastLoginAt: now,
@@ -192,14 +302,14 @@ export class ClientPortalInvitationsService {
         },
         create: {
           ownerUserId: invite.ownerUserId,
-          clientAuthUserId: authUserId,
+          clientAuthUserId: authUserId!,
           clientId: client?.id ?? null,
           clientPhone: invite.clientPhone,
           isActive: true,
           lastSeenAt: now,
         },
         update: {
-          clientAuthUserId: authUserId,
+          clientAuthUserId: authUserId!,
           clientId: client?.id ?? null,
           isActive: true,
           lastSeenAt: now,
@@ -217,6 +327,7 @@ export class ClientPortalInvitationsService {
         client_name: displayName,
         owner_user_id: invite.ownerUserId,
         purpose: invite.purpose,
+        login_email: email,
       };
     });
 

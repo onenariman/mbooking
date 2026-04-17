@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import NavbarMenu from "@/components/Navbar";
-import { OwnerMobileNav } from "@/components/layout/OwnerMobileNav";
 import { TanstackProvider } from "@/components/providers/tanstack-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { Devtools } from "@/src/devtools/devtools";
@@ -17,7 +16,6 @@ export default function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const isPublicFeedbackRoute = pathname.startsWith("/feedback/");
   const isClientRoute = pathname === "/client" || pathname.startsWith("/client/");
-  /** Мастер: только форма, без шапки и каркаса (как /login и /register). */
   const isOwnerAuthSurface =
     pathname === "/" ||
     pathname.startsWith("/login") ||
@@ -49,8 +47,8 @@ export default function AppShell({ children }: AppShellProps) {
       <header className="mx-auto mt-5 max-w-2xl px-4 md:max-w-5xl">
         <nav className="flex items-center justify-between">
           <Link href="/">
-            <span className="cursor-pointer text-xl font-semibold tracking-tight transition-opacity hover:opacity-80 md:text-2xl">
-              Reception
+            <span className="cursor-pointer font-sans text-xl font-semibold tracking-tight transition-opacity hover:opacity-80 md:text-2xl">
+              Ресепшн
             </span>
           </Link>
           <NavbarMenu />
@@ -64,7 +62,6 @@ export default function AppShell({ children }: AppShellProps) {
         </TanstackProvider>
         <Toaster position="top-center" closeButton />
       </main>
-      <OwnerMobileNav />
     </>
   );
 }

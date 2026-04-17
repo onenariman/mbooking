@@ -21,8 +21,22 @@ const envSchema = z.object({
   YANDEX_MODEL_URI: z.string().optional(),
   YANDEX_IAM_TOKEN: z.string().optional(),
   YANDEX_API_KEY: z.string().optional(),
-  /** Если `false` — отключена саморегистрация мастера по паролю */
+  /** `true` — разрешить саморегистрацию мастера по паролю (редкий dev / миграция) */
   OWNER_PASSWORD_REGISTRATION_ENABLED: z.enum(["true", "false"]).optional(),
+  /** `true` — разрешить вход мастера по паролю (клиентский кабинет не зависит от этого) */
+  OWNER_PASSWORD_LOGIN_ENABLED: z.enum(["true", "false"]).optional(),
+  YANDEX_OAUTH_CLIENT_ID: z.string().optional(),
+  YANDEX_OAUTH_CLIENT_SECRET: z.string().optional(),
+  YANDEX_OAUTH_REDIRECT_URI: z.string().optional(),
+  /** Должен совпадать с `NEST_OAUTH_CALLBACK_SECRET` на Next (route handler) */
+  NEST_OAUTH_CALLBACK_SECRET: z.string().optional(),
+  /**
+   * Только development/test: разрешить старт API без успешного подключения к БД.
+   * В production игнорируется — при недоступной БД процесс завершится при старте.
+   */
+  ALLOW_START_WITHOUT_DB: z.enum(["true", "false"]).optional(),
+  /** `true` — не запускать встроенный cron dispatch напоминаний */
+  DISABLE_REMINDERS_CRON: z.enum(["true", "false"]).optional(),
 });
 
 export function validateEnv(config: Record<string, unknown>) {

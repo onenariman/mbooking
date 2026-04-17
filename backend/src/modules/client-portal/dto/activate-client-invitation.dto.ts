@@ -1,8 +1,10 @@
-import { IsEmail, IsString, MaxLength, MinLength } from "class-validator";
+import { IsEmail, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
 
 export class ActivateClientInvitationDto {
+  /** Для активации кабинета обязателен; для password_reset не нужен (email берётся из аккаунта) */
+  @IsOptional()
   @IsEmail()
-  email!: string;
+  email?: string;
 
   @IsString()
   @MinLength(8)

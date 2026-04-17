@@ -1,5 +1,4 @@
 import { ListOrdered } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
   Card,
   CardContent,
@@ -7,13 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
-import { cn } from "@/src/lib/utils";
-import { currencyFormatter, revenueChartConfig } from "../lib/constants";
+import { currencyFormatter } from "../lib/constants";
 import type { RevenueByServicePoint } from "../lib/types";
 
 const TOP_N = 6;
@@ -23,7 +16,10 @@ type RevenueByServiceChartProps = {
   categoryLabel: string;
 };
 
-/** Горизонтальный bar только для топ-N услуг — меньше серий и проще на узком экране. */
+/**
+ * Топ услуг: название полностью сверху (перенос длинных слов), полоска выручки и сумма снизу —
+ * без обрезки под узкий Y-axis в recharts.
+ */
 export default function RevenueByServiceChart({
   data,
   categoryLabel,
@@ -31,6 +27,7 @@ export default function RevenueByServiceChart({
   const sorted = [...data].sort((a, b) => b.revenue - a.revenue);
   const top = sorted.slice(0, TOP_N);
   const rest = sorted.length - top.length;
+  const maxRevenue = Math.max(1, ...top.map((d) => d.revenue));
 
   return (
     <Card className="overflow-hidden">
@@ -44,60 +41,42 @@ export default function RevenueByServiceChart({
           {rest > 0 ? ` Показано ${TOP_N} из ${sorted.length}.` : null}
         </CardDescription>
       </CardHeader>
-      <CardContent className="px-2 pb-2 pt-0 sm:px-4 sm:pb-4">
+      <CardContent className="px-3 pb-3 pt-0 sm:px-6 sm:pb-6">
         {top.length === 0 ? (
           <p className="py-12 text-center text-sm text-muted-foreground">
             Нет данных по завершённым услугам.
           </p>
         ) : (
-          <ChartContainer
-            config={revenueChartConfig}
-            className="aspect-[4/5] w-full max-h-80 sm:aspect-[16/11] sm:max-h-72"
-          >
-            <BarChart
-              data={top}
-              layout="vertical"
-              accessibilityLayer
-              margin={{ top: 4, right: 12, left: 4, bottom: 4 }}
-            >
-              <CartesianGrid horizontal={false} strokeDasharray="4 4" className="stroke-border/60" />
-              <YAxis
-                dataKey="service"
-                type="category"
-                tickLine={false}
-                axisLine={false}
-                width={100}
-                tick={({ x, y, payload }) => (
-                  <text
-                    x={x}
-                    y={y}
-                    dy={3}
-                    textAnchor="end"
-                    className={cn("fill-muted-foreground text-[11px] leading-tight")}
+          <ul className="flex flex-col gap-5">
+            {top.map((row, index) => {
+              const widthPct = (row.revenue / maxRevenue) * 100;
+              return (
+                <li key={`${row.service}-${index}`} className="min-w-0">
+                  <p
+                    className="text-sm font-medium leading-snug text-foreground [overflow-wrap:anywhere] break-words hyphens-auto"
+                    lang="ru"
                   >
-                    {String(payload.value).length > 16
-                      ? `${String(payload.value).slice(0, 15)}…`
-                      : String(payload.value)}
-                  </text>
-                )}
-              />
-              <XAxis type="number" dataKey="revenue" hide />
-              <ChartTooltip
-                cursor={{ fill: "var(--muted)", opacity: 0.15 }}
-                content={
-                  <ChartTooltipContent
-                    indicator="line"
-                    formatter={(value) => (
-                      <span className="font-mono tabular-nums">
-                        {currencyFormatter.format(Number(value))}
-                      </span>
-                    )}
-                  />
-                }
-              />
-              <Bar dataKey="revenue" fill="var(--color-revenue)" radius={[0, 6, 6, 0]} maxBarSize={28} />
-            </BarChart>
-          </ChartContainer>
+                    {row.service}
+                  </p>
+                  <div className="mt-2 flex items-center gap-3">
+                    <div
+                      className="h-2.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"
+                      role="presentation"
+                      aria-hidden
+                    >
+                      <div
+                        className="h-full min-w-[2px] rounded-full bg-primary"
+                        style={{ width: `${widthPct}%` }}
+                      />
+                    </div>
+                    <span className="shrink-0 text-right text-sm font-medium tabular-nums text-foreground">
+                      {currencyFormatter.format(row.revenue)}
+                    </span>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </CardContent>
     </Card>

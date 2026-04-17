@@ -12,6 +12,22 @@ enum UserRole {
   client_portal
 }
 
+enum UserAuthType {
+  password
+  oauth_yandex
+}
+
+enum OAuthProvider {
+  yandex
+}
+
+enum OwnerSubscriptionStatus {
+  trial
+  active
+  expired
+  canceled
+}
+
 enum AppointmentStatus {
   booked
   completed
@@ -37,19 +53,73 @@ enum ReminderStatus {
   cancelled
 }
 
+enum ReminderRecipient {
+  owner
+  client
+}
+
 enum ClientPortalInvitePurpose {
   activation
   password_reset
 }
 
 model User {
-  id           String   @id @default(uuid()) @db.Uuid
-  email        String   @unique
-  passwordHash String
+  id           String       @id @default(uuid()) @db.Uuid
+  email        String       @unique
+  passwordHash String?
+  authType     UserAuthType @default(password)
   role         UserRole
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  oauthIdentities   OAuthIdentity[]
+  ownerSubscription OwnerSubscription?
+  ownerOrganization OwnerOrganization?
+}
+
+model OwnerOrganization {
+  id          String   @id @default(uuid()) @db.Uuid
+  ownerUserId String   @unique @db.Uuid
+  fullName    String?
+  phone       String?
+  inn         String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner User @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  @@index([ownerUserId])
+}
+
+model OAuthIdentity {
+  id             String         @id @default(uuid()) @db.Uuid
+  userId         String         @db.Uuid
+  provider       OAuthProvider
+  providerUserId String
+  providerEmail  String?
+  rawProfile     Json?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+}
+
+model OwnerSubscription {
+  id                 String                  @id @default(uuid()) @db.Uuid
+  ownerUserId        String                  @unique @db.Uuid
+  status             OwnerSubscriptionStatus
+  trialStartedAt     DateTime?
+  trialEndsAt        DateTime?
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+
+  user User @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
 }
 
 model RefreshToken {
@@ -251,12 +321,17 @@ model ClientPortalInvite {
 }
 
 model ClientPortalProfile {
-  authUserId           String   @id @db.Uuid
-  phone                String   @unique
-  displayName          String?
-  notificationsEnabled Boolean  @default(false)
-  lastLoginAt          DateTime?
-  createdAt            DateTime @default(now())
+  authUserId                   String   @id @db.Uuid
+  phone                        String   @unique
+  displayName                  String?
+  notificationsEnabled         Boolean  @default(false)
+  /** Смещения напоминаний о записи для push клиенту (пусто = не слать клиенту) */
+  clientReminderOffsetsMinutes Int[]    @default([])
+  /** Окно тишины UTC «HH:mm», например 22:00 — не беспокоить с 22:00 до quietHoursEndUtc */
+  quietHoursStartUtc           String?  @db.VarChar(5)
+  quietHoursEndUtc             String?  @db.VarChar(5)
+  lastLoginAt                  DateTime?
+  createdAt                    DateTime @default(now())
 }
 
 model ClientPortalLink {
@@ -295,16 +370,17 @@ model OwnerNotificationSettings {
 }
 
 model AppointmentReminder {
-  id            String       @id @default(uuid()) @db.Uuid
-  appointmentId String       @db.Uuid
-  userId        String       @db.Uuid
-  offsetMinutes Int
-  remindAt      DateTime
-  status        ReminderStatus
-  sentAt        DateTime?
-  cancelledAt   DateTime?
-  createdAt     DateTime     @default(now())
+  id              String             @id @default(uuid()) @db.Uuid
+  appointmentId   String             @db.Uuid
+  userId          String             @db.Uuid
+  offsetMinutes   Int
+  recipient       ReminderRecipient  @default(owner)
+  remindAt        DateTime
+  status          ReminderStatus
+  sentAt          DateTime?
+  cancelledAt     DateTime?
+  createdAt       DateTime           @default(now())
 
-  @@unique([appointmentId, offsetMinutes])
+  @@unique([appointmentId, offsetMinutes, recipient])
   @@index([userId])
 }

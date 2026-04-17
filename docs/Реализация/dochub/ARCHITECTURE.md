@@ -16,7 +16,7 @@
 - `src/server/` — server-side helper'ы для Nest, cookie/session logic, SSR context.
 - `backend/src/` — NestJS модули, контроллеры, guards, DTO, Prisma service.
 - `backend/prisma/` — Prisma schema, seed и миграционная логика backend.
-- `docs/migration-status/` — актуальный handoff и статус миграции.
+- `docs/` — документация проекта (старт: `docs/DOCUMENTATION_HUB.md`).
 
 ## 3) Маршруты
 - `/` и `/login` — вход мастера.

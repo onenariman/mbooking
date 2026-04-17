@@ -18,6 +18,10 @@ const baseQueryOptions = {
   refetchOnWindowFocus: false,
 };
 
+/** Клиентский кабинет: чуть агрессивнее retry при обрывах сети */
+const clientPortalRetryDelay = (attemptIndex: number) =>
+  Math.min(1000 * 2 ** attemptIndex, 8000);
+
 export const QUERY_OPTIONS = {
   reference: {
     ...baseQueryOptions,
@@ -26,6 +30,12 @@ export const QUERY_OPTIONS = {
   live: {
     ...baseQueryOptions,
     staleTime: QUERY_STALE_TIMES.live,
+  },
+  clientPortal: {
+    ...baseQueryOptions,
+    staleTime: QUERY_STALE_TIMES.live,
+    retry: 2,
+    retryDelay: clientPortalRetryDelay,
   },
   analytics: {
     ...baseQueryOptions,

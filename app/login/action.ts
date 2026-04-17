@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { postNestAuth } from "@/src/server/nest-auth-server";
 import { setOwnerSessionCookies } from "@/src/server/owner-session-cookies";
 
-export async function login(formData: FormData) {
+export async function loginOwnerWithPassword(formData: FormData) {
   const email = (formData.get("email") as string).trim().toLowerCase();
   const password = formData.get("password") as string;
 

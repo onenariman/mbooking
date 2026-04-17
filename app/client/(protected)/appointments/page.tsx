@@ -23,7 +23,7 @@ export default async function ClientAppointmentsPage() {
         <CardHeader>
           <CardTitle>Будущие записи</CardTitle>
           <CardDescription>
-            Здесь видны все предстоящие визиты.
+            Предстоящие визиты к мастеру по вашему номеру телефона.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">

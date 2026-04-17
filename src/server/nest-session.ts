@@ -6,13 +6,12 @@ import {
   getSessionCookieNames,
 } from "@/src/server/owner-session-cookies";
 import {
-  getOwnerRegistrationEnabled,
   refreshNestSessionTokens,
   type ResolvedSession,
 } from "@/src/server/nest-session-shared";
 import { type SessionKind } from "@/src/server/owner-session-cookies";
 
-export { getOwnerRegistrationEnabled, refreshNestSessionTokens };
+export { refreshNestSessionTokens };
 export type { ResolvedSession };
 
 export async function resolveSessionFromCookies(

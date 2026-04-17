@@ -15,7 +15,7 @@ export function PageShell({ title, description, children, className }: PageShell
   return (
     <div
       className={cn(
-        "mx-auto flex w-full max-w-2xl flex-col gap-6 pb-24 md:max-w-5xl md:pb-10 min-h-dvh",
+        "mx-auto flex w-full max-w-2xl flex-col gap-6 pb-10 md:max-w-5xl min-h-dvh",
         className,
       )}
     >

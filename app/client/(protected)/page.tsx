@@ -56,8 +56,8 @@ export default async function ClientHomePage() {
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Пока нет будущих записей. Когда администратор создаст новую запись,
-              она появится здесь.
+              Пока нет будущих записей. Когда мастер создаст новую запись на ваш
+              номер, она появится здесь.
             </p>
           )}
         </CardContent>

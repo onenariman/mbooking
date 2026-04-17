@@ -8,8 +8,12 @@ import { normalizePhone } from "@/src/validators/normalizePhone";
 export type ClientPortalProfile = {
   auth_user_id: string;
   phone: string;
+  email: string | null;
   display_name: string | null;
   notifications_enabled: boolean;
+  client_reminder_offsets_minutes: number[];
+  quiet_hours_start_utc: string | null;
+  quiet_hours_end_utc: string | null;
   created_at?: string;
   last_login_at?: string | null;
 };
@@ -91,8 +95,12 @@ export async function getClientPortalContextFromSession(): Promise<ClientPortalC
     data?: {
       auth_user_id: string;
       phone: string;
+      email: string | null;
       display_name: string | null;
       notifications_enabled: boolean;
+      client_reminder_offsets_minutes: number[];
+      quiet_hours_start_utc: string | null;
+      quiet_hours_end_utc: string | null;
       active_owner_user_id: string;
       linked_businesses_count: number;
     };
@@ -107,8 +115,12 @@ export async function getClientPortalContextFromSession(): Promise<ClientPortalC
   const profile: ClientPortalProfile = {
     auth_user_id: data.auth_user_id,
     phone: data.phone,
+    email: data.email ?? null,
     display_name: data.display_name,
     notifications_enabled: data.notifications_enabled,
+    client_reminder_offsets_minutes: data.client_reminder_offsets_minutes ?? [],
+    quiet_hours_start_utc: data.quiet_hours_start_utc ?? null,
+    quiet_hours_end_utc: data.quiet_hours_end_utc ?? null,
   };
 
   const activeLink: ClientPortalLink = {
@@ -183,8 +195,12 @@ export async function getClientPortalMe(context: ClientPortalContext) {
   return {
     auth_user_id: context.authUserId,
     phone: context.clientPhone,
+    email: context.profile.email,
     display_name: context.profile.display_name,
     notifications_enabled: context.profile.notifications_enabled,
+    client_reminder_offsets_minutes: context.profile.client_reminder_offsets_minutes,
+    quiet_hours_start_utc: context.profile.quiet_hours_start_utc,
+    quiet_hours_end_utc: context.profile.quiet_hours_end_utc,
     active_owner_user_id: context.ownerUserId,
     linked_businesses_count: context.links.length,
   };

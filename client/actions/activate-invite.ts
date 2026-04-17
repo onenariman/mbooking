@@ -6,7 +6,7 @@ import { setClientPortalSessionCookies } from "@/src/server/owner-session-cookie
 
 export async function activateClientInviteAndLogin(input: {
   token: string;
-  email: string;
+  email?: string;
   password: string;
   confirm_password: string;
 }) {
@@ -21,25 +21,43 @@ export async function activateClientInviteAndLogin(input: {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        email: input.email.trim().toLowerCase(),
+        ...(input.email?.trim()
+          ? { email: input.email.trim().toLowerCase() }
+          : {}),
         password: input.password,
         confirm_password: input.confirm_password,
       }),
     },
   );
-  const actPayload = (await act.json().catch(() => ({}))) as { message?: string };
+  const actPayload = (await act.json().catch(() => ({}))) as {
+    message?: string | string[];
+    data?: { login_email?: string };
+  };
   if (!act.ok) {
-    const m = encodeURIComponent(
-      actPayload.message || act.statusText || "Ошибка активации",
-    );
+    const raw =
+      typeof actPayload.message === "string"
+        ? actPayload.message
+        : Array.isArray(actPayload.message)
+          ? actPayload.message.join(", ")
+          : act.statusText || "Ошибка активации";
+    const m = encodeURIComponent(raw);
     redirect(`/client/invite/${input.token}?error=activate&message=${m}`);
+  }
+
+  const loginEmail =
+    actPayload.data?.login_email?.trim().toLowerCase() ??
+    input.email?.trim().toLowerCase();
+  if (!loginEmail) {
+    redirect(
+      `/client/invite/${input.token}?error=activate&message=${encodeURIComponent("Не удалось определить email для входа")}`,
+    );
   }
 
   const login = await fetch(`${base}/v1/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      email: input.email.trim().toLowerCase(),
+      email: loginEmail,
       password: input.password,
     }),
   });

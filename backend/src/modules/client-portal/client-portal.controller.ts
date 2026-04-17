@@ -182,7 +182,13 @@ export class ClientPortalController {
     @CurrentUser("sub") authUserId: string,
     @Body() dto: ClientSettingsDto,
   ) {
-    if (dto.notifications_enabled === undefined) {
+    const hasField =
+      dto.notifications_enabled !== undefined ||
+      dto.email !== undefined ||
+      dto.client_reminder_offsets_minutes !== undefined ||
+      dto.quiet_hours_start_utc !== undefined ||
+      dto.quiet_hours_end_utc !== undefined;
+    if (!hasField) {
       throw new BadRequestException("Нет полей для обновления");
     }
     const data = await this.contextService.updateSettings(authUserId, dto);

@@ -98,6 +98,10 @@ const NavbarMenu = () => {
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
+              <Link href="/organization">Организация</Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
               <Link href="/categories">Категории</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>

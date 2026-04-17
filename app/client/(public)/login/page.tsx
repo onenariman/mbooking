@@ -8,7 +8,8 @@ export default function ClientLoginPage() {
         <CardHeader>
           <CardTitle>Вход в личный кабинет</CardTitle>
           <CardDescription>
-            Войдите по email и паролю, которые вы указали при активации приглашения.
+            Войдите по email и паролю от кабинета. Если забыли пароль — попросите у
+            мастера ссылку для сброса.
           </CardDescription>
         </CardHeader>
         <CardContent>

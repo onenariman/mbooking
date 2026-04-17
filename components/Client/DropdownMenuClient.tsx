@@ -10,6 +10,7 @@ import {
   MessageCircle,
   Percent,
   Phone,
+  RotateCcw,
   Send,
   Trash2,
 } from "lucide-react";
@@ -62,6 +63,8 @@ export function DropdownMenuClient({
   const [showEdit, setShowEdit] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isCreatingPortalInvite, setIsCreatingPortalInvite] = useState(false);
+  const [isCreatingPasswordResetInvite, setIsCreatingPasswordResetInvite] =
+    useState(false);
   const [discountPercent, setDiscountPercent] = useState("");
   const [discountNote, setDiscountNote] = useState("");
   const [discountServiceId, setDiscountServiceId] = useState<string | null>(null);
@@ -197,6 +200,77 @@ export function DropdownMenuClient({
     }
   };
 
+  const handleSendPasswordResetInvite = async () => {
+    if (!phone) {
+      toast.error("У клиента нет корректного номера телефона");
+      return;
+    }
+
+    try {
+      setIsCreatingPasswordResetInvite(true);
+
+      const { nestOwnerFetch } = await import("@/src/utils/api/nestOwnerApi");
+      const response = await nestOwnerFetch("client/invitations", {
+        method: "POST",
+        body: JSON.stringify({
+          client_id: client.id,
+          client_user_id: client.user_id,
+          client_phone: phone,
+          purpose: "password_reset",
+          expires_in_hours: 24,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            data?: {
+              invitation_link: string;
+            };
+            message?: string;
+          }
+        | null;
+
+      if (!response.ok || !payload?.data) {
+        throw new Error(payload?.message || "Не удалось создать ссылку");
+      }
+
+      const invitationLink = payload.data.invitation_link;
+      const invitationMessage = [
+        "Ссылка для смены пароля личного кабинета:",
+        "",
+        invitationLink,
+        "",
+        "Если кабинет ещё не активирован — сначала отправьте приглашение на активацию.",
+      ].join("\n");
+      const encodedMessage = encodeURIComponent(invitationMessage);
+
+      if (whatsappPhone) {
+        window.open(
+          `https://wa.me/${whatsappPhone}?text=${encodedMessage}`,
+          "_blank",
+          "noopener,noreferrer",
+        );
+        toast.success("Ссылка сброса пароля открыта в WhatsApp");
+        return;
+      }
+
+      if (phone.trim()) {
+        window.location.assign(`sms:${phone}?&body=${encodedMessage}`);
+        toast.success("Ссылка сброса пароля добавлена в SMS");
+        return;
+      }
+
+      await navigator.clipboard.writeText(invitationLink);
+      toast.success("Ссылка сброса пароля скопирована");
+    } catch (error) {
+      toast.error(
+        getErrorMessage(error, "Не удалось создать ссылку сброса пароля"),
+      );
+    } finally {
+      setIsCreatingPasswordResetInvite(false);
+    }
+  };
+
   const handleCreateDiscount = async () => {
     const parsedPercent = Number(discountPercent);
 
@@ -282,6 +356,15 @@ export function DropdownMenuClient({
           >
             <KeyRound className="h-4 w-4 text-muted-foreground" />
             Пригласить в кабинет
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={handleSendPasswordResetInvite}
+            disabled={
+              isCreatingPasswordResetInvite || (!phone.trim() && !whatsappPhone)
+            }
+          >
+            <RotateCcw className="h-4 w-4 text-muted-foreground" />
+            Сброс пароля кабинета
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => setShowCreateDiscount(true)}

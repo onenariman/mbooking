@@ -22,13 +22,6 @@ export type ResolvedSession = {
   clearCookies?: boolean;
 };
 
-export function getOwnerRegistrationEnabled(): boolean {
-  const raw =
-    process.env.OWNER_PASSWORD_REGISTRATION_ENABLED ??
-    process.env.NEXT_PUBLIC_OWNER_REGISTRATION_ENABLED;
-  return raw !== "false";
-}
-
 function splitCookieHeader(cookieHeader: string): Array<[string, string]> {
   return cookieHeader
     .split(";")
